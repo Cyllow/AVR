@@ -1,0 +1,15 @@
+#ifndef CHINESE_12_H_
+#define CHINESE_12_H
+ 
+typedef struct
+{
+    unsigned char value[2];   //GBKÄÚÂë
+	unsigned char data[24];   //×ÖÄ£
+}HZZM_12;
+
+extern const unsigned char chinese_12_len;
+extern const HZZM_12 chinese_12[17];
+#endif
+
+  
+

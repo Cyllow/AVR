@@ -1,0 +1,92 @@
+//ICC-AVR application builder : 2018/5/16 20:53:45
+// Target : M16
+// Crystal: 7.3728Mhz
+
+#include <iom16v.h>
+#include <macros.h>
+
+void Usart_Transmit(unsigned char i)
+{
+	while(!(UCSRA&(1<<UDRE)));  //判断UDR是否为空
+	UDR=i;                      //发送数据
+}
+
+void Uart_SndStr(unsigned char * str)
+{
+	while(*str)
+	{
+		Usart_Transmit(*str);
+		str++;
+	}
+}
+
+void port_init(void)
+{
+ PORTA = 0x00;
+ DDRA  = 0x00;
+ PORTB = 0x00;
+ DDRB  = 0x00;
+ PORTC = 0x00; //m103 output only
+ DDRC  = 0x00;
+ PORTD = 0x00;
+ DDRD  = 0x00;
+}
+
+//UART0 initialize
+// desired baud rate: 9600
+// actual: baud rate:9600 (0.0%)
+void uart0_init(void)
+{
+	UCSRB = 0x00; //disable while setting baud rate
+	UCSRA = 0x00;
+	UCSRC = BIT(URSEL) | 0x06;
+	UBRRL = 0x2F; //set baud rate lo
+	UBRRH = 0x00; //set baud rate hi
+	UCSRB = 0xD8;
+}
+
+#pragma interrupt_handler uart0_rx_isr:iv_USART0_RXC
+void uart0_rx_isr(void)
+{
+	//uart has received a character in UDR
+	if(UDR == 0X11)
+		Uart_SndStr("start!\n");
+	else if(UDR == 0x22)
+		Uart_SndStr("stop!\n");
+	else
+		Uart_SndStr("!!!");
+}
+
+#pragma interrupt_handler uart0_tx_isr:iv_USART0_TXC
+void uart0_tx_isr(void)
+{
+	//character has been transmitted
+}
+
+//call this routine to initialize all peripherals
+void init_devices(void)
+{
+	//stop errant interrupts until set up
+	CLI(); //disable all interrupts
+	port_init();
+	uart0_init();
+
+	MCUCR = 0x00;
+	GICR  = 0x00;
+	TIMSK = 0x00; //timer interrupt sources
+	SEI(); //re-enable interrupts
+	//all peripherals are now initialized
+}
+
+
+void main(void)
+{
+	init_devices();
+	Uart_SndStr("URL Test");
+	while(1);
+}
+
+
+
+
+

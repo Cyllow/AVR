@@ -1,0 +1,157 @@
+﻿#include <iom16v.h>
+#include <macros.h>
+
+
+unsigned int t[9] = {0,956,865,759,716,638,568,506,470};
+unsigned char d[9] = {0,105,116,132,140,157,176,198,209};
+
+unsigned char note_n = 0;
+unsigned int int_n = 1;
+unsigned char sound_flag = 0;
+unsigned char flag = 0;
+
+
+//写的时候写了0.1S为1/4拍，即0.4S一拍
+//可根据曲子的节拍调整note_rate
+//注：period_rate在程序中作为了除数；note_rate在程序中作为了商
+#define period_rate 0.9216
+#define note_rate 2
+
+
+/*#define Max_note 32
+unsigned char music[Max_note] = 
+				{5,2,8,2,5,2,4,2,3,2,2,2,1,4,1,2,1,2,2,2,3,2,3,2,1,2,3,2,4,2,5,8};*/
+				
+#define Max_note 600
+unsigned char music[Max_note]={
+
+
+                                         4,2,  3,2,  4,2,  6,2,  3,4,  3,4,            2,2, 1,2, 2,2, 4,2, 1,4, 1,4,        7,2, 6,2, 7,2, 4,2, 3,4, 1,4,
+ 2,2, 3,2, 4,2, 6,2, 5,4, 5,4,           4,2,  3,2,  4,2,  6,2,  3,4,  1,4,            2,2, 3,2, 4,2, 5,2, 6,4, 6,4,        7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,
+ 2,4, 2,4, 2,4, 0,4,        4,2, 3,2, 4,2, 6,2, 3,4, 3,4,       2,2, 1,2, 2,2, 4,2, 1,4, 1,4,      7,2, 6,2, 7,2, 4,2, 3,4, 1,4,   2,2, 3,2, 4,2, 6,2, 5,4, 5,4, 
+ 4,2, 3,2, 4,2, 6,2, 3,4, 1,4,           2,2,  3,2,  4,2,  5,2,  6,4,  6,4,            7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,   2,4, 2,4, 2,4,
+ 6,4, 5,4,        1,4, 7,4, 6,4, 5,4,     3,4, 3,4, 0,2, 3,2, 4,2, 2,2, 2,4, 2,4, 2,4, 0,4,     7,4, 1,4, 2,2, 4,4,   
+ 3,4, 4,4, 5,2, 7,4, 6,2, 6,4, 6,4, 6,4, 0,4, 0,4, 0,4,0,4,0,4,
+
+
+
+                                         4,2,  3,2,  4,2,  6,2,  3,4,  3,4,            2,2, 1,2, 2,2, 4,2, 1,4, 1,4,        7,2, 6,2, 7,2, 4,2, 3,4, 1,4,
+ 2,2, 3,2, 4,2, 6,2, 5,4, 5,4,           4,2,  3,2,  4,2,  6,2,  3,4,  1,4,            2,2, 3,2, 4,2, 5,2, 6,4, 6,4,        7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,
+ 2,4, 2,4, 2,4, 0,4,        4,2, 3,2, 4,2, 6,2, 3,4, 3,4,       2,2, 1,2, 2,2, 4,2, 1,4, 1,4,      7,2, 6,2, 7,2, 4,2, 3,4, 1,4,   2,2, 3,2, 4,2, 6,2, 5,4, 5,4, 
+ 4,2, 3,2, 4,2, 6,2, 3,4, 1,4,           2,2,  3,2,  4,2,  5,2,  6,4,  6,4,            7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,   2,4, 2,4, 2,4, 2,1, 3,1, 4,1, 5,1,
+ 6,4, 6,4, 6,4, 5,4,        1,4, 7,4, 6,4, 5,4,     3,4, 3,4, 0,2, 3,2, 4,2, 2,2, 2,4, 2,4, 2,4, 0,4,     7,4, 1,4, 2,2, 4,4,   
+ 3,4, 4,4, 5,2, 7,4, 6,2, 6,4, 6,4, 6,4, 0,4, 0,4, 0,4,0,4,0,4,      5,2, 4,2, 5,2, 7,2, 4,4, 4,4
+                           };
+
+
+
+void port_init()
+{
+	DDRA |= (1 << 3);
+	PORTA |= (1 << 3);
+}
+				
+//CTC模式，8分频
+void timer1_init(void)
+{
+	//TCCR1B = 0x00; //stop
+	//TCNT1H = 0xDC; //setup
+	//TCNT1L = 0x01;
+	//OCR1AH = 0x23;
+	//OCR1AL = 0xFF;
+	//OCR1BH = 0x23;
+	//OCR1BL = 0xFF;
+	//ICR1H  = 0x23;
+	//ICR1L  = 0xFF;
+	TCCR1A = 0x40;
+	TCCR1B = 0x0A;	//CTC模式,8分频,start
+}
+
+#pragma interrupt_handler timer1_compa_isr:iv_TIM1_COMPA
+void timer1_compa_isr(void)
+{
+	//compare occured TCNT1=OCR1A
+	if(note_n == Max_note)	//重头开始播放音乐
+	{
+		note_n = 0;
+		int_n = 1;
+	}
+	else
+	{
+		if(--int_n == 0)	//播放完一个音符
+		{
+			if(music[note_n] == 0)	//无声音一段时间
+			{
+				sound_flag = 0;
+				TCCR1B = 0x08;	//timer1停止工作
+				PORTA |= (1 << 3);	//关闭蜂鸣器
+				OCR1A = t[1] / period_rate;
+				int_n = d[1] * note_rate;
+				note_n++;
+				int_n = int_n * music[note_n];
+				note_n++;
+				TCCR1B = 0x0A;	//启动timer1，播放下一个音符
+			}
+			else
+			{
+				sound_flag = 1;
+				TCCR1B = 0x08;	//timer1停止工作
+				OCR1A = t[music[note_n]] / period_rate;//取下一个音符
+				int_n = d[music[note_n]] * note_rate;//取该音符的基本节拍单位
+				note_n++;
+				int_n = int_n * music[note_n];	//计算该音符的节拍值
+				note_n++;
+				TCCR1B = 0x0A;		//启动timer1，播放下一个音符
+			}
+		}
+		else
+		{
+			if(sound_flag)
+			{
+				if(flag)
+				{
+					PORTA &= ~(1<<3);
+					flag = 0;
+				}
+				else
+				{
+					PORTA |= (1<<3);
+					flag = 1;
+				}
+			}
+		}
+	}
+}
+
+//call this routine to initialize all peripherals
+void init_devices(void)
+{
+	//stop errant interrupts until set up
+	CLI(); //disable all interrupts
+	port_init();
+	timer1_init();
+
+	MCUCR = 0x00;
+	GICR  = 0x00;
+	TIMSK = 0x10; //timer interrupt sources
+	SEI(); //re-enable interrupts
+	//all peripherals are now initialized
+}
+
+
+
+
+void main(void)
+{
+	init_devices();
+	while(1)
+	{
+		
+	}
+}
+
+
+
+
+
+

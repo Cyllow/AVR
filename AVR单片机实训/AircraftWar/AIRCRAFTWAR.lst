@@ -1,0 +1,4536 @@
+Interrupt Vectors
+    00000 940C 0539 JMP	__start|__text_start
+    0000C 940C 0654 JMP	_timer1_compa_isr
+    00012 940C 08DC JMP	_timer0_ovf_isr
+
+Program Code (text area)
+__start|__text_start:
+    00539 E5CF      LDI	R28,0x5F
+    0053A E0D4      LDI	R29,4
+    0053B BFCD      OUT	0x3D,R28
+    0053C BFDE      OUT	0x3E,R29
+    0053D 51CE      SUBI	R28,0x1E
+    0053E 40D0      SBCI	R29,0
+    0053F EA0A      LDI	R16,0xAA
+    00540 8308      ST	Y,R16
+    00541 2400      CLR	R0
+    00542 E6E1      LDI	R30,0x61
+    00543 E0F1      LDI	R31,1
+    00544 E011      LDI	R17,1
+    00545 36E2      CPI	R30,0x62
+    00546 07F1      CPC	R31,R17
+    00547 F011      BEQ	0x054A
+    00548 9201      ST	Z+,R0
+    00549 CFFB      RJMP	0x0545
+    0054A 8300      ST	Z,R16
+    0054B E7E1      LDI	R30,0x71
+    0054C E0F9      LDI	R31,0x9
+    0054D E6A0      LDI	R26,0x60
+    0054E E0B0      LDI	R27,0
+    0054F E01A      LDI	R17,0xA
+    00550 E000      LDI	R16,0
+    00551 BF0B      OUT	0x3B,R16
+    00552 37E2      CPI	R30,0x72
+    00553 07F1      CPC	R31,R17
+    00554 F021      BEQ	0x0559
+    00555 95C8      LPM
+    00556 9631      ADIW	R30,1
+    00557 920D      ST	X+,R0
+    00558 CFF9      RJMP	0x0552
+    00559 940E 115D CALL	_main
+_exit:
+    0055B CFFF      RJMP	_exit
+FILE: C:\Users\ASUS\Desktop\AircraftWar\3310LCD.c
+(0001) 
+(0002) #include <iom16v.h>
+(0003) #include <macros.h>
+(0004) #include "ASCII_6x8.h"
+(0005) #include "3310LCD.h"
+(0006) #include "chinese_12x12.h"
+(0007) 
+(0008) void LCD_write_byte(unsigned char data, unsigned char dc);
+(0009) /*-----------------------------------------------------------------------
+(0010) LCD_init          : 3310LCD初始化
+(0011) 
+(0012) 编写日期          ：2004-8-10 
+(0013) 最后修改日期      ：2004-8-10 
+(0014) -----------------------------------------------------------------------*/
+(0015) void delayus(unsigned int counter)
+(0016) {
+_delayus:
+  counter              --> R16
+    0055C C004      RJMP	0x0561
+(0017) 	while(counter--)
+(0018) 	{
+(0019) 		NOP();
+    0055D 0000      NOP
+(0020) 		NOP();
+    0055E 0000      NOP
+(0021) 		NOP();
+    0055F 0000      NOP
+(0022) 		NOP();	
+    00560 0000      NOP
+    00561 0118      MOVW	R2,R16
+    00562 5001      SUBI	R16,1
+    00563 4010      SBCI	R17,0
+    00564 2022      TST	R2
+    00565 F7B9      BNE	0x055D
+    00566 2033      TST	R3
+    00567 F7A9      BNE	0x055D
+    00568 9508      RET
+(0023) 	}
+(0024) }
+(0025) 
+(0026) void LCDInit(void)
+(0027) {
+(0028) 
+(0029) 	PORTA &= ~LCD_RST;          // 产生一个让LCD复位的低电平脉冲
+_LCDInit:
+    00569 98DD      CBI	0x1B,5
+(0030) 	delayus(10);
+    0056A E00A      LDI	R16,0xA
+    0056B E010      LDI	R17,0
+    0056C DFEF      RCALL	_delayus
+(0031) 	PORTA |= LCD_RST;
+    0056D 9ADD      SBI	0x1B,5
+(0032) 
+(0033) 	PORTA &= ~LCD_CE ;		//  使能LCD
+    0056E 98DC      CBI	0x1B,4
+(0034) 	delayus(10);
+    0056F E00A      LDI	R16,0xA
+    00570 E010      LDI	R17,0
+    00571 DFEA      RCALL	_delayus
+(0035) 
+(0036) 	LCD_write_byte(0x21, 0);	// 使用扩展命令设置LCD模式0b0010 0001
+    00572 2722      CLR	R18
+    00573 E201      LDI	R16,0x21
+    00574 D069      RCALL	_LCD_write_byte
+(0037) 	LCD_write_byte(0b11000000, 0);	// 设置偏置电压Vop  0b1100 1000 //越大，整体越暗  对比度c8
+    00575 2722      CLR	R18
+    00576 EC00      LDI	R16,0xC0
+    00577 D066      RCALL	_LCD_write_byte
+(0038) 	LCD_write_byte(0x06, 0);	// 温度校正        0b0000 0110
+    00578 2722      CLR	R18
+    00579 E006      LDI	R16,6
+    0057A D063      RCALL	_LCD_write_byte
+(0039) 	LCD_write_byte(0x13, 0);	// 1:48 偏置系统   0b0001 0011
+    0057B 2722      CLR	R18
+    0057C E103      LDI	R16,0x13
+    0057D D060      RCALL	_LCD_write_byte
+(0040) 	LCD_write_byte(0x20, 0);	// 使用基本命令 0b0010 0000
+    0057E 2722      CLR	R18
+    0057F E200      LDI	R16,0x20
+    00580 D05D      RCALL	_LCD_write_byte
+(0041) 	LCDFull(0x00);	        // 清屏
+    00581 2700      CLR	R16
+    00582 D005      RCALL	_LCDFull
+(0042) 	LCD_write_byte(0x0c, 0);	// 设定显示模式，正常显示0b0000 1100
+    00583 2722      CLR	R18
+    00584 E00C      LDI	R16,0xC
+    00585 D058      RCALL	_LCD_write_byte
+(0043) 
+(0044) 	PORTA |= LCD_CE;          // 关闭LCD
+    00586 9ADC      SBI	0x1B,4
+    00587 9508      RET
+_LCDFull:
+  i                    --> R20
+  data                 --> R10
+    00588 940E 120D CALL	push_xgset300C
+    0058A 2EA0      MOV	R10,R16
+(0045) }
+(0046) 
+(0047) /*-----------------------------------------------------------------------
+(0048) LCD_clear         : LCD清屏函数
+(0049) 
+(0050) 编写日期          ：2004-8-10 
+(0051) 最后修改日期      ：2004-8-10 
+(0052) -----------------------------------------------------------------------*/
+(0053) void LCDFull(unsigned char data)
+(0054) {
+(0055) 	unsigned int i;
+(0056) 
+(0057) 	LCD_write_byte(0x0c, 0);			
+    0058B 2722      CLR	R18
+    0058C E00C      LDI	R16,0xC
+    0058D D050      RCALL	_LCD_write_byte
+(0058) 	LCD_write_byte(0x80, 0);			
+    0058E 2722      CLR	R18
+    0058F E800      LDI	R16,0x80
+    00590 D04D      RCALL	_LCD_write_byte
+(0059) 
+(0060) 	for (i=0; i<504; i++)
+    00591 2744      CLR	R20
+    00592 2755      CLR	R21
+    00593 C005      RJMP	0x0599
+(0061) 		//添加填充代码
+(0062) 		LCD_write_byte(data,1);			
+    00594 E021      LDI	R18,1
+    00595 2D0A      MOV	R16,R10
+    00596 D047      RCALL	_LCD_write_byte
+    00597 5F4F      SUBI	R20,0xFF
+    00598 4F5F      SBCI	R21,0xFF
+    00599 3F48      CPI	R20,0xF8
+    0059A E0E1      LDI	R30,1
+    0059B 075E      CPC	R21,R30
+    0059C F3B8      BCS	0x0594
+    0059D 940C 1212 JMP	pop_xgset300C
+_LCD_set_XY:
+  Y                    --> R22
+  X                    --> R20
+    0059F 934A      ST	-Y,R20
+    005A0 936A      ST	-Y,R22
+    005A1 2F62      MOV	R22,R18
+    005A2 2F40      MOV	R20,R16
+(0063) }
+(0064) 
+(0065) /*-----------------------------------------------------------------------
+(0066) LCD_set_XY        : 设置LCD坐标函数
+(0067) 
+(0068) 输入参数：X       ：0－83
+(0069) Y       ：0－5
+(0070) 
+(0071) 编写日期          ：2004-8-10 
+(0072) 最后修改日期      ：2004-8-10 
+(0073) -----------------------------------------------------------------------*/
+(0074) void LCD_set_XY(unsigned char X, unsigned char Y)
+(0075) {
+(0076) 	LCD_write_byte(0x40 | Y, 0);		// column
+    005A3 2722      CLR	R18
+    005A4 2F06      MOV	R16,R22
+    005A5 6400      ORI	R16,0x40
+    005A6 D037      RCALL	_LCD_write_byte
+(0077) 	LCD_write_byte(0x80 | X, 0);          	// row
+    005A7 2722      CLR	R18
+    005A8 2F04      MOV	R16,R20
+    005A9 6800      ORI	R16,0x80
+    005AA D033      RCALL	_LCD_write_byte
+    005AB 9169      LD	R22,Y+
+    005AC 9149      LD	R20,Y+
+    005AD 9508      RET
+_LCD_write_char:
+  line                 --> R20
+  c                    --> R22
+    005AE 934A      ST	-Y,R20
+    005AF 936A      ST	-Y,R22
+    005B0 2F60      MOV	R22,R16
+(0078) }
+(0079) 
+(0080) /*-----------------------------------------------------------------------
+(0081) LCD_write_char    : 显示英文字符
+(0082) 
+(0083) 输入参数：c       ：显示的字符；
+(0084) 
+(0085) 编写日期          ：2004-8-10 
+(0086) 最后修改日期      ：2004-8-10 
+(0087) -----------------------------------------------------------------------*/
+(0088) void LCD_write_char(unsigned char c)
+(0089) {
+(0090) 	unsigned char line;
+(0091) 	c -= 32;
+    005B1 5260      SUBI	R22,0x20
+(0092) 	for(line = 0;line < 6;line++)
+    005B2 2744      CLR	R20
+    005B3 C010      RJMP	0x05C4
+(0093) 	    LCD_write_byte(font6x8[c][line],1);
+    005B4 E021      LDI	R18,1
+    005B5 E006      LDI	R16,6
+    005B6 2F16      MOV	R17,R22
+    005B7 0301      MULSU	R16,R17
+    005B8 0110      MOVW	R2,R0
+    005B9 E584      LDI	R24,0x54
+    005BA E090      LDI	R25,0
+    005BB 0E28      ADD	R2,R24
+    005BC 1E39      ADC	R3,R25
+    005BD 2FE4      MOV	R30,R20
+    005BE 27FF      CLR	R31
+    005BF 0DE2      ADD	R30,R2
+    005C0 1DF3      ADC	R31,R3
+    005C1 9104      LPM	R16,Z
+    005C2 D01B      RCALL	_LCD_write_byte
+    005C3 9543      INC	R20
+    005C4 3046      CPI	R20,6
+    005C5 F370      BCS	0x05B4
+    005C6 9169      LD	R22,Y+
+    005C7 9149      LD	R20,Y+
+    005C8 9508      RET
+_LCD_write_english_string:
+  line                 --> Y,+1
+  i                    --> Y,+1
+  s                    --> R20
+  Y                    --> R12
+  X                    --> R10
+    005C9 940E 122F CALL	push_xgset303C
+    005CB 2EC2      MOV	R12,R18
+    005CC 2EA0      MOV	R10,R16
+    005CD 814E      LDD	R20,Y+6
+    005CE 815F      LDD	R21,Y+7
+(0094) }
+(0095) 
+(0096) /*-----------------------------------------------------------------------
+(0097) LCD_write_english_String  : 英文字符串显示函数
+(0098) 
+(0099) 输入参数：*s      ：英文字符串指针；
+(0100) X、Y    : 显示字符串的位置,x 0-83 ,y 0-5
+(0101) 
+(0102) 编写日期          ：2004-8-10 
+(0103) 最后修改日期      ：2004-8-10 		
+(0104) -----------------------------------------------------------------------*/
+(0105) void LCD_write_english_string(unsigned char X,unsigned char Y,char *s)
+(0106) {
+(0107) 	unsigned char i,line;
+(0108) 	LCD_set_XY(X,Y);
+    005CF 2D2C      MOV	R18,R12
+    005D0 2D0A      MOV	R16,R10
+    005D1 DFCD      RCALL	_LCD_set_XY
+    005D2 C005      RJMP	0x05D8
+(0109) 	while(*s)
+(0110) 	{
+(0111) 	     LCD_write_char(*s);
+    005D3 01FA      MOVW	R30,R20
+    005D4 8100      LD	R16,Z
+    005D5 DFD8      RCALL	_LCD_write_char
+(0112) 		 s++;
+    005D6 5F4F      SUBI	R20,0xFF
+    005D7 4F5F      SBCI	R21,0xFF
+    005D8 01FA      MOVW	R30,R20
+    005D9 8020      LD	R2,Z
+    005DA 2022      TST	R2
+    005DB F7B9      BNE	0x05D3
+    005DC 940C 1236 JMP	pop_xgset303C
+(0113) 	}
+(0114) }
+(0115) 
+(0116) /*-----------------------------------------------------------------------
+(0117) LCD_write_byte    : 使用SPI接口写数据到LCD
+(0118) 
+(0119) 输入参数：data    ：写入的数据；
+(0120) command ：写数据/命令选择；
+(0121) 
+(0122) 编写日期          ：2004-8-10 
+(0123) 最后修改日期      ：2004-8-13 
+(0124) -----------------------------------------------------------------------*/
+(0125) void LCD_write_byte(unsigned char data, unsigned char command)
+(0126) {
+(0127) 	PORTA &= ~LCD_CE ;		        // 使能LCD
+_LCD_write_byte:
+  command              --> R18
+  data                 --> R16
+    005DE 98DC      CBI	0x1B,4
+(0128) 
+(0129) 	if (command == 0)
+    005DF 2322      TST	R18
+    005E0 F411      BNE	0x05E3
+(0130) 		PORTA &= ~LCD_DC ;	        // 传送命令
+    005E1 98DE      CBI	0x1B,6
+    005E2 C001      RJMP	0x05E4
+(0131) 	else
+(0132) 		PORTA |= LCD_DC ;		        // 传送数据
+    005E3 9ADE      SBI	0x1B,6
+(0133) 
+(0134) 	SPDR = data;			// 传送数据到SPI寄存器
+    005E4 B90F      OUT	0x0F,R16
+(0135) 
+(0136) 	while ((SPSR & 0x80) == 0);         // 等待数据传送完毕
+    005E5 9B77      SBIS	0x0E,7
+    005E6 CFFE      RJMP	0x05E5
+(0137) 
+(0138) 	PORTA |= LCD_CE ;			// 关闭LCD
+    005E7 9ADC      SBI	0x1B,4
+    005E8 9508      RET
+_LCD_WriteCHchar:
+  i                    --> R20
+  Addr                 --> R12
+  Y                    --> R22
+  X                    --> R10
+    005E9 940E 123D CALL	push_xgsetF03C
+    005EB 2F62      MOV	R22,R18
+    005EC 2EA0      MOV	R10,R16
+    005ED 84C8      LDD	R12,Y+8
+(0139) }
+(0140) 
+(0141) //编写单个汉字
+(0142) void LCD_WriteCHchar(unsigned char X,unsigned char Y,unsigned char Addr)
+(0143) {
+(0144)      unsigned char i;
+(0145) 	 LCD_set_XY(X,Y);
+    005EE 2F26      MOV	R18,R22
+    005EF 2D0A      MOV	R16,R10
+    005F0 DFAE      RCALL	_LCD_set_XY
+(0146) 	 for(i = 0;i < 24;i++)
+    005F1 2744      CLR	R20
+    005F2 C016      RJMP	0x0609
+(0147) 	 {
+(0148) 	      if(i == 12)
+    005F3 304C      CPI	R20,0xC
+    005F4 F421      BNE	0x05F9
+(0149) 		      LCD_set_XY(X,Y+1);
+    005F5 2F26      MOV	R18,R22
+    005F6 5F2F      SUBI	R18,0xFF
+    005F7 2D0A      MOV	R16,R10
+    005F8 DFA6      RCALL	_LCD_set_XY
+(0150) 		  LCD_write_byte(chinese_12[Addr].data[i],1);
+    005F9 E021      LDI	R18,1
+    005FA E10A      LDI	R16,0x1A
+    005FB 2D1C      MOV	R17,R12
+    005FC 0301      MULSU	R16,R17
+    005FD 0110      MOVW	R2,R0
+    005FE EC8F      LDI	R24,0xCF
+    005FF E096      LDI	R25,6
+    00600 0E28      ADD	R2,R24
+    00601 1E39      ADC	R3,R25
+    00602 2FE4      MOV	R30,R20
+    00603 27FF      CLR	R31
+    00604 0DE2      ADD	R30,R2
+    00605 1DF3      ADC	R31,R3
+    00606 9104      LPM	R16,Z
+    00607 DFD6      RCALL	_LCD_write_byte
+    00608 9543      INC	R20
+    00609 3148      CPI	R20,0x18
+    0060A F340      BCS	0x05F3
+    0060B 940C 1246 JMP	pop_xgsetF03C
+_LCD_DispCHstr:
+  count                --> R12
+  Addr                 --> R10
+  i                    --> R14
+  pstr                 --> R20
+  Y                    --> R22
+  X                    --> Y,+11
+    0060D 940E 11CA CALL	push_arg4
+    0060F 940E 1202 CALL	push_xgsetF0FC
+    00611 2F62      MOV	R22,R18
+    00612 9721      SBIW	R28,1
+    00613 854F      LDD	R20,Y+15
+    00614 8958      LDD	R21,Y+16
+(0151) 	 }
+(0152) }
+(0153) 
+(0154) 
+(0155) //显示汉字字符串
+(0156) void LCD_DispCHstr(unsigned char X,unsigned char Y,unsigned char *pstr)
+(0157) {
+(0158)      unsigned char i;
+(0159) 	 unsigned char Addr = 0;
+    00615 24AA      CLR	R10
+(0160) 	 unsigned char count = 0;
+    00616 24CC      CLR	R12
+    00617 C02F      RJMP	0x0647
+(0161) 	 while(*pstr)
+(0162) 	 {
+(0163) 	      for(i = 0;i < chinese_12_len;i++)
+    00618 24EE      CLR	R14
+    00619 C01B      RJMP	0x0635
+(0164) 	      {
+(0165) 	           if((chinese_12[i].value[0] == *pstr) && (chinese_12[i].value[1] == *(pstr+1)))
+    0061A E10A      LDI	R16,0x1A
+    0061B 2D1E      MOV	R17,R14
+    0061C 0301      MULSU	R16,R17
+    0061D 0120      MOVW	R4,R0
+    0061E EC8D      LDI	R24,0xCD
+    0061F E096      LDI	R25,6
+    00620 01F2      MOVW	R30,R4
+    00621 0FE8      ADD	R30,R24
+    00622 1FF9      ADC	R31,R25
+    00623 9024      LPM	R2,Z
+    00624 01FA      MOVW	R30,R20
+    00625 8030      LD	R3,Z
+    00626 1423      CP	R2,R3
+    00627 F461      BNE	0x0634
+    00628 EC8E      LDI	R24,0xCE
+    00629 E096      LDI	R25,6
+    0062A 01F2      MOVW	R30,R4
+    0062B 0FE8      ADD	R30,R24
+    0062C 1FF9      ADC	R31,R25
+    0062D 9024      LPM	R2,Z
+    0062E 01FA      MOVW	R30,R20
+    0062F 8031      LDD	R3,Z+1
+    00630 1423      CP	R2,R3
+    00631 F411      BNE	0x0634
+(0166) 		       {
+(0167) 		             Addr = i;
+    00632 2CAE      MOV	R10,R14
+(0168) 		         	 break;
+    00633 C006      RJMP	0x063A
+    00634 94E3      INC	R14
+    00635 ECEC      LDI	R30,0xCC
+    00636 E0F6      LDI	R31,6
+    00637 9024      LPM	R2,Z
+    00638 14E2      CP	R14,R2
+    00639 F300      BCS	0x061A
+(0169) 		       } 
+(0170) 	      }
+(0171) 	 
+(0172) 	      LCD_WriteCHchar(X+count*12,Y,Addr);
+    0063A 82A8      ST	Y,R10
+    0063B 2F26      MOV	R18,R22
+    0063C E00C      LDI	R16,0xC
+    0063D 2D1C      MOV	R17,R12
+    0063E 0301      MULSU	R16,R17
+    0063F 850B      LDD	R16,Y+11
+    00640 0D00      ADD	R16,R0
+    00641 DFA7      RCALL	_LCD_WriteCHchar
+(0173) 		  count++;
+    00642 94C3      INC	R12
+(0174) 		  
+(0175) 		  pstr++;
+    00643 5F4F      SUBI	R20,0xFF
+    00644 4F5F      SBCI	R21,0xFF
+(0176) 		  pstr++;
+    00645 5F4F      SUBI	R20,0xFF
+    00646 4F5F      SBCI	R21,0xFF
+    00647 01FA      MOVW	R30,R20
+    00648 8020      LD	R2,Z
+    00649 2022      TST	R2
+    0064A F009      BEQ	0x064C
+    0064B CFCC      RJMP	0x0618
+    0064C 9621      ADIW	R28,1
+    0064D 940E 11F7 CALL	pop_xgsetF0FC
+    0064F 9624      ADIW	R28,4
+    00650 9508      RET
+FILE: C:\Users\ASUS\Desktop\AircraftWar\LCD.c
+(0001) //ICC-AVR application builder : 2009-10-23 18:40:43
+(0002) // Target : M16
+(0003) // Crystal: 7.3728Mhz
+(0004) 
+(0005) #include <iom16v.h>
+(0006) #include <macros.h>
+(0007) #include "3310LCD.h"
+(0008) 
+(0009) 
+(0010) #define CLR_SHCLK() PORTB &= ~(1<<1)//移位时钟 SCLK
+(0011) #define SET_SHCLK() PORTB |= (1<<1)	//移位时钟 SCLK，上升沿
+(0012) 
+(0013) #define CLR_STCLK() PORTB &= ~(1<<0) //锁存时钟 RCLK
+(0014) #define SET_STCLK() PORTB |= (1<<0)	//拉高锁存时钟，上升沿
+(0015) 
+(0016) #define CLR_DS()	PORTA &= ~(1<<0)//清零
+(0017) #define SET_DS()	PORTA |= (1<<0)	//置位
+(0018) 
+(0019) #define key_input ((PIND&(1<<3))|(PINA&(1<<7)))
+(0020) #define key_state_0 0
+(0021) #define key_state_1 1
+(0022) #define key_state_2 2
+(0023) #define key_state_3 3
+(0024) #define nokey 0
+(0025) #define SW8 1
+(0026) #define key1_short 2
+(0027) #define key1_long 3
+(0028) 
+(0029) #define noflash 0
+(0030) #define secflash 1
+(0031) #define minflash 2
+(0032) 
+(0033) unsigned int t[9] = {0,956,865,759,716,638,568,506,470};
+(0034) unsigned char d[9] = {0,105,116,132,140,157,176,198,209};
+(0035) 
+(0036) unsigned char note_n = 0;
+(0037) unsigned int int_n = 1;
+(0038) unsigned char sound_flag = 0;
+(0039) unsigned char flag = 0;
+(0040) #define period_rate 0.9216
+(0041) #define note_rate 2
+(0042) 
+(0043) 
+(0044) 
+(0045) 
+(0046) 
+(0047) 
+(0048) //梦中的婚礼
+(0049) #define music1_Max_note 500
+(0050) const unsigned char music1[music1_Max_note] = {
+(0051) 			3,2, 3,2, 3,2, 1,1, 3,1,   5,2,   5,2,   1,1,  5,1,  3,2,  6,2, 7,2, 7,1, 6,2, 5,2, 3,2, 5,1, 6,1, 4,1, 5,1,
+(0052) 
+(0053)  3,1,  1,1, 2,1, 7,2,  1,2,  5,1,   3,1,  6,2, 7,1,  7,1, 6,2,  5,1, 3,2, 5,2, 6,2, 4,2, 5,2,  3,2, 2,1, 1,1, 7,4,
+(0054) 
+(0055)  5,2, 4,1, 4,1, 3,2, 3,2, 5,1, 6,2, 1,2, 6,1,  1,1, 2,2,  5,1, 4,1, 4,2, 3,2,  3,2, 1,2, 1,2, 1,2,   5,1, 4,1, 4,1, 3,2, 3,1,
+(0056)  
+(0057)  
+(0058)  
+(0059)  
+(0060)  0,4, 0,4, 0,4,  0,2, 6,1, 6,1, 7,1, 7,1, 1,1, 1,1, 7,1, 7,1, 6,1, 6,1, 3,1,3,1, 1,1, 1,1, 6,1, 6,1, 5,1,5,1, 4,1, 4,1, 3,1, 4,1, 5,1, 4,2, 4,4,
+(0061)  
+(0062)  0,1, 4,1, 4,1, 5,1, 5,1, 6,1, 6,1, 7,1, 7,1, 5,1, 5,1, 2,1, 2,1, 4,1, 4,1, 3,1, 3,1, 2,1, 3,1, 4,1, 3,2, 3,2, 3,1, 3,4,
+(0063)  
+(0064)  3,2, 6,1, 1,1, 3,1, 2,1, 3,2, 6,1, 1,1, 3,1, 2,1, 3,2, 6,1, 1,1, 4,1, 3,1, 4,2, 6,1, 1,1, 4,1, 3,1, 4,2, 4,1, 3,1, 4,1, 4,1, 5,2, 5,1, 6,1, 5,1, 6,1, 3,4,
+(0065)  
+(0066)  3,2, 6,1, 1,1, 3,1, 2,1, 3,2, 6,1, 1,1, 3,1, 2,1, 3,2, 6,1, 1,1, 4,1, 3,1, 4,2, 6,1, 1,1, 4,1, 3,1, 4,2, 4,1, 3,1, 4,1, 4,1, 5,2, 5,1, 6,1, 5,1, 6,1, 3,4,
+(0067)  
+(0068)  1,2, 3,1, 3,1, 4,1, 4,2, 2,1, 2,1, 7,1, 7,2, 2,1, 2,1, 3,1, 3,2, 1,1, 1,1, 6,1, 5,1, 6,2, 1,1, 1,1, 2,1, 2,2, 7,1, 3,1, 2,1, 3,4
+(0069)  
+(0070) 
+(0071) 			};
+(0072) 	
+(0073) 
+(0074) 
+(0075) 
+(0076) //星之所在			
+(0077) #define music2_Max_note 600
+(0078) const unsigned char music2[music2_Max_note]={
+(0079)                                          4,2,  3,2,  4,2,  6,2,  3,4,  3,4,            2,2, 1,2, 2,2, 4,2, 1,4, 1,4,        7,2, 6,2, 7,2, 4,2, 3,4, 1,4,
+(0080)  2,2, 3,2, 4,2, 6,2, 5,4, 5,4,           4,2,  3,2,  4,2,  6,2,  3,4,  1,4,            2,2, 3,2, 4,2, 5,2, 6,4, 6,4,        7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,
+(0081)  2,4, 2,4, 2,4, 0,4,        4,2, 3,2, 4,2, 6,2, 3,4, 3,4,       2,2, 1,2, 2,2, 4,2, 1,4, 1,4,      7,2, 6,2, 7,2, 4,2, 3,4, 1,4,   2,2, 3,2, 4,2, 6,2, 5,4, 5,4, 
+(0082)  4,2, 3,2, 4,2, 6,2, 3,4, 1,4,           2,2,  3,2,  4,2,  5,2,  6,4,  6,4,            7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,   2,4, 2,4, 2,4,
+(0083)  6,4, 5,4,        1,4, 7,4, 6,4, 5,4,     3,4, 3,4, 0,2, 3,2, 4,2, 2,2, 2,4, 2,4, 2,4, 0,4,     7,4, 1,4, 2,2, 4,4,   
+(0084)  3,4, 4,4, 5,2, 7,4, 6,2, 6,4, 6,4, 6,4, 0,4, 0,4, 0,4,0,4,0,4,
+(0085)                                          4,2,  3,2,  4,2,  6,2,  3,4,  3,4,            2,2, 1,2, 2,2, 4,2, 1,4, 1,4,        7,2, 6,2, 7,2, 4,2, 3,4, 1,4,
+(0086)  2,2, 3,2, 4,2, 6,2, 5,4, 5,4,           4,2,  3,2,  4,2,  6,2,  3,4,  1,4,            2,2, 3,2, 4,2, 5,2, 6,4, 6,4,        7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,
+(0087)  2,4, 2,4, 2,4, 0,4,        4,2, 3,2, 4,2, 6,2, 3,4, 3,4,       2,2, 1,2, 2,2, 4,2, 1,4, 1,4,      7,2, 6,2, 7,2, 4,2, 3,4, 1,4,   2,2, 3,2, 4,2, 6,2, 5,4, 5,4, 
+(0088)  4,2, 3,2, 4,2, 6,2, 3,4, 1,4,           2,2,  3,2,  4,2,  5,2,  6,4,  6,4,            7,2, 6,2, 5,2, 4,2, 3,2, 6,2, 1,2, 3,2,   2,4, 2,4, 2,4, 2,1, 3,1, 4,1, 5,1,
+(0089)  6,4, 6,4, 6,4, 5,4,        1,4, 7,4, 6,4, 5,4,     3,4, 3,4, 0,2, 3,2, 4,2, 2,2, 2,4, 2,4, 2,4, 0,4,     7,4, 1,4, 2,2, 4,4,   
+(0090)  3,4, 4,4, 5,2, 7,4, 6,2, 6,4, 6,4, 6,4, 0,4, 0,4, 0,4,0,4,0,4,      5,2, 4,2, 5,2, 7,2, 4,4, 4,4
+(0091)                            };
+(0092) 
+(0093) 
+(0094) 						   
+(0095) unsigned char music_sel = 2;						   
+(0096) 
+(0097) //定义字符表 		   														
+(0098) unsigned char led_7[14] = {0xc0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,
+(0099) 		 	  			   0x80,0x90,0xff,0x7f,0xc6,0x00};
+(0100) unsigned char disp_buff_min_number = 0;	
+(0101) unsigned char disp_buff_sec_number = 0;				 
+(0102) unsigned char disp_buff[4] = {0,0,0,0};
+(0103) unsigned char post = 0;
+(0104) unsigned char time_10ms_count = 0;
+(0105) unsigned char time_10ms_ok = 0;
+(0106) unsigned char time_300ms_count = 0;
+(0107) unsigned char time_300ms_ok = 0;
+(0108) unsigned int time_1s_count = 0;
+(0109) unsigned char time_1s_ok = 0;
+(0110) unsigned char isflash = noflash;
+(0111) unsigned char flash_count = 0;
+(0112) 
+(0113) unsigned char layout0[2] = {1,0x08};
+(0114) unsigned char layout1[2] = {1,0x08};
+(0115) unsigned char layout2[2] = {1,0x08};
+(0116) unsigned char layout3[2] = {1,0x08};
+(0117) unsigned char layout4[2] = {1,0x08};
+(0118) unsigned char layout5[2] = {1,0x08};
+(0119) unsigned char plane_x = 40;
+(0120) unsigned char plane_y = 5;
+(0121) unsigned char plane_bullet_x = 0;
+(0122) unsigned char plane_bullet_y = 0;
+(0123) 
+(0124) 
+(0125) //CTC模式，8分频
+(0126) void timer1_init(void)
+(0127) {
+(0128) 	//TCCR1A = 0x40;
+(0129) 	//TCCR1B = 0x0A;	//CTC模式,8分频,start
+(0130) 	TCCR1B = 0x08;		//stop
+_timer1_init:
+    00651 E088      LDI	R24,0x8
+    00652 BD8E      OUT	0x2E,R24
+    00653 9508      RET
+_timer1_compa_isr:
+    00654 921A      ST	-Y,R1
+    00655 922A      ST	-Y,R2
+    00656 923A      ST	-Y,R3
+    00657 924A      ST	-Y,R4
+    00658 925A      ST	-Y,R5
+    00659 930A      ST	-Y,R16
+    0065A 931A      ST	-Y,R17
+    0065B 932A      ST	-Y,R18
+    0065C 933A      ST	-Y,R19
+    0065D 938A      ST	-Y,R24
+    0065E 939A      ST	-Y,R25
+    0065F 93EA      ST	-Y,R30
+    00660 93FA      ST	-Y,R31
+    00661 B61F      IN	R1,0x3F
+    00662 921A      ST	-Y,R1
+(0131) }
+(0132) 
+(0133) #pragma interrupt_handler timer1_compa_isr:iv_TIM1_COMPA
+(0134) void timer1_compa_isr(void)
+(0135) {
+(0136) 	//compare occured TCNT1=OCR1A
+(0137) 	if(music_sel == 1)
+    00663 9180 0080 LDS	R24,music_sel
+    00665 3081      CPI	R24,1
+    00666 F009      BEQ	0x0668
+    00667 C0DA      RJMP	0x0742
+(0138) 	{
+(0139) 		if(note_n == music1_Max_note)	//重头开始播放音乐
+    00668 9180 007B LDS	R24,note_n
+    0066A 3F84      CPI	R24,0xF4
+    0066B F451      BNE	0x0676
+(0140) 		{
+(0141) 			note_n = 0;
+    0066C 2422      CLR	R2
+    0066D 9220 007B STS	note_n,R2
+(0142) 			int_n = 1;
+    0066F E081      LDI	R24,1
+    00670 E090      LDI	R25,0
+    00671 9390 007D STS	int_n+1,R25
+    00673 9380 007C STS	int_n,R24
+(0143) 		}
+    00675 C1A4      RJMP	0x081A
+(0144) 		else
+(0145) 		{
+(0146) 			if(--int_n == 0)	//播放完一个音符
+    00676 9180 007C LDS	R24,int_n
+    00678 9190 007D LDS	R25,int_n+1
+    0067A 9701      SBIW	R24,1
+    0067B 011C      MOVW	R2,R24
+    0067C 9230 007D STS	int_n+1,R3
+    0067E 9220 007C STS	int_n,R2
+    00680 3080      CPI	R24,0
+    00681 0789      CPC	R24,R25
+    00682 F009      BEQ	0x0684
+    00683 C0AB      RJMP	0x072F
+(0147) 			{
+(0148) 				if(music1[note_n] == 0)	//无声音一段时间
+    00684 E78C      LDI	R24,0x7C
+    00685 E092      LDI	R25,2
+    00686 91E0 007B LDS	R30,note_n
+    00688 27FF      CLR	R31
+    00689 0FE8      ADD	R30,R24
+    0068A 1FF9      ADC	R31,R25
+    0068B 9024      LPM	R2,Z
+    0068C 2022      TST	R2
+    0068D F009      BEQ	0x068F
+    0068E C044      RJMP	0x06D3
+(0149) 				{
+(0150) 					sound_flag = 0;
+    0068F 2422      CLR	R2
+    00690 9220 007E STS	sound_flag,R2
+(0151) 					TCCR1B = 0x08;	//timer1停止工作
+    00692 E088      LDI	R24,0x8
+    00693 BD8E      OUT	0x2E,R24
+(0152) 					PORTA |= (1 << 3);	//关闭蜂鸣器
+    00694 9ADB      SBI	0x1B,3
+(0153) 					OCR1A = t[1] / period_rate;
+    00695 9100 0062 LDS	R16,t+2
+    00697 9110 0063 LDS	R17,t+3
+    00699 940E 12A4 CALL	uint2fp
+    0069B 0118      MOVW	R2,R16
+    0069C 0129      MOVW	R4,R18
+    0069D EC08      LDI	R16,0xC8
+    0069E E016      LDI	R17,6
+    0069F 940E 1258 CALL	lpm32
+    006A1 933A      ST	-Y,R19
+    006A2 932A      ST	-Y,R18
+    006A3 931A      ST	-Y,R17
+    006A4 930A      ST	-Y,R16
+    006A5 0181      MOVW	R16,R2
+    006A6 0192      MOVW	R18,R4
+    006A7 940E 12D1 CALL	fpdiv2
+    006A9 940E 1272 CALL	fpint
+    006AB BD1B      OUT	0x2B,R17
+    006AC BD0A      OUT	0x2A,R16
+(0154) 					int_n = d[1] * note_rate;
+    006AD 9020 0073 LDS	R2,d+1
+    006AF 2433      CLR	R3
+    006B0 0C22      LSL	R2
+    006B1 1C33      ROL	R3
+    006B2 9230 007D STS	int_n+1,R3
+    006B4 9220 007C STS	int_n,R2
+(0155) 					note_n++;
+    006B6 9180 007B LDS	R24,note_n
+    006B8 5F8F      SUBI	R24,0xFF
+    006B9 9380 007B STS	note_n,R24
+(0156) 					int_n = int_n * music1[note_n];
+    006BB E78C      LDI	R24,0x7C
+    006BC E092      LDI	R25,2
+    006BD 91E0 007B LDS	R30,note_n
+    006BF 27FF      CLR	R31
+    006C0 0FE8      ADD	R30,R24
+    006C1 1FF9      ADC	R31,R25
+    006C2 9124      LPM	R18,Z
+    006C3 2733      CLR	R19
+    006C4 0181      MOVW	R16,R2
+    006C5 940E 11E7 CALL	empy16s
+    006C7 9310 007D STS	int_n+1,R17
+    006C9 9300 007C STS	int_n,R16
+(0157) 					note_n++;
+    006CB 9180 007B LDS	R24,note_n
+    006CD 5F8F      SUBI	R24,0xFF
+    006CE 9380 007B STS	note_n,R24
+(0158) 					TCCR1B = 0x0A;	//启动timer1，播放下一个音符
+    006D0 E08A      LDI	R24,0xA
+    006D1 BD8E      OUT	0x2E,R24
+(0159) 				}
+    006D2 C147      RJMP	0x081A
+(0160) 				else
+(0161) 				{
+(0162) 					sound_flag = 1;
+    006D3 E081      LDI	R24,1
+    006D4 9380 007E STS	sound_flag,R24
+(0163) 					TCCR1B = 0x08;	//timer1停止工作
+    006D6 E088      LDI	R24,0x8
+    006D7 BD8E      OUT	0x2E,R24
+(0164) 					OCR1A = t[music1[note_n]] / period_rate;//取下一个音符
+    006D8 E78C      LDI	R24,0x7C
+    006D9 E092      LDI	R25,2
+    006DA 91E0 007B LDS	R30,note_n
+    006DC 27FF      CLR	R31
+    006DD 0FE8      ADD	R30,R24
+    006DE 1FF9      ADC	R31,R25
+    006DF 91E4      LPM	R30,Z
+    006E0 27FF      CLR	R31
+    006E1 0FEE      LSL	R30
+    006E2 1FFF      ROL	R31
+    006E3 E680      LDI	R24,0x60
+    006E4 E090      LDI	R25,0
+    006E5 0FE8      ADD	R30,R24
+    006E6 1FF9      ADC	R31,R25
+    006E7 8100      LD	R16,Z
+    006E8 8111      LDD	R17,Z+1
+    006E9 940E 12A4 CALL	uint2fp
+    006EB 0118      MOVW	R2,R16
+    006EC 0129      MOVW	R4,R18
+    006ED EC08      LDI	R16,0xC8
+    006EE E016      LDI	R17,6
+    006EF 940E 1258 CALL	lpm32
+    006F1 933A      ST	-Y,R19
+    006F2 932A      ST	-Y,R18
+    006F3 931A      ST	-Y,R17
+    006F4 930A      ST	-Y,R16
+    006F5 0181      MOVW	R16,R2
+    006F6 0192      MOVW	R18,R4
+    006F7 940E 12D1 CALL	fpdiv2
+    006F9 940E 1272 CALL	fpint
+    006FB BD1B      OUT	0x2B,R17
+    006FC BD0A      OUT	0x2A,R16
+(0165) 					int_n = d[music1[note_n]] * note_rate;//取该音符的基本节拍单位
+    006FD E78C      LDI	R24,0x7C
+    006FE E092      LDI	R25,2
+    006FF 91E0 007B LDS	R30,note_n
+    00701 27FF      CLR	R31
+    00702 0FE8      ADD	R30,R24
+    00703 1FF9      ADC	R31,R25
+    00704 91E4      LPM	R30,Z
+    00705 27FF      CLR	R31
+    00706 E782      LDI	R24,0x72
+    00707 E090      LDI	R25,0
+    00708 0FE8      ADD	R30,R24
+    00709 1FF9      ADC	R31,R25
+    0070A 8020      LD	R2,Z
+    0070B 2433      CLR	R3
+    0070C 0C22      LSL	R2
+    0070D 1C33      ROL	R3
+    0070E 9230 007D STS	int_n+1,R3
+    00710 9220 007C STS	int_n,R2
+(0166) 					note_n++;
+    00712 9180 007B LDS	R24,note_n
+    00714 5F8F      SUBI	R24,0xFF
+    00715 9380 007B STS	note_n,R24
+(0167) 					int_n = int_n * music1[note_n];	//计算该音符的节拍值
+    00717 E78C      LDI	R24,0x7C
+    00718 E092      LDI	R25,2
+    00719 91E0 007B LDS	R30,note_n
+    0071B 27FF      CLR	R31
+    0071C 0FE8      ADD	R30,R24
+    0071D 1FF9      ADC	R31,R25
+    0071E 9124      LPM	R18,Z
+    0071F 2733      CLR	R19
+    00720 0181      MOVW	R16,R2
+    00721 940E 11E7 CALL	empy16s
+    00723 9310 007D STS	int_n+1,R17
+    00725 9300 007C STS	int_n,R16
+(0168) 					note_n++;
+    00727 9180 007B LDS	R24,note_n
+    00729 5F8F      SUBI	R24,0xFF
+    0072A 9380 007B STS	note_n,R24
+(0169) 					TCCR1B = 0x0A;		//启动timer1，播放下一个音符
+    0072C E08A      LDI	R24,0xA
+    0072D BD8E      OUT	0x2E,R24
+(0170) 				}
+(0171) 			}
+    0072E C0EB      RJMP	0x081A
+(0172) 			else
+(0173) 			{
+(0174) 				if(sound_flag)
+    0072F 9020 007E LDS	R2,sound_flag
+    00731 2022      TST	R2
+    00732 F409      BNE	0x0734
+    00733 C0E6      RJMP	0x081A
+(0175) 				{
+(0176) 					if(flag)
+    00734 9020 007F LDS	R2,flag
+    00736 2022      TST	R2
+    00737 F029      BEQ	0x073D
+(0177) 					{
+(0178) 						PORTA &= ~(1<<3);
+    00738 98DB      CBI	0x1B,3
+(0179) 						flag = 0;
+    00739 2422      CLR	R2
+    0073A 9220 007F STS	flag,R2
+(0180) 					}
+    0073C C0DD      RJMP	0x081A
+(0181) 					else
+(0182) 					{
+(0183) 						PORTA |= (1<<3);
+    0073D 9ADB      SBI	0x1B,3
+(0184) 						flag = 1;
+    0073E E081      LDI	R24,1
+    0073F 9380 007F STS	flag,R24
+(0185) 					}
+(0186) 				}
+(0187) 			}
+(0188) 		}
+(0189) 	}
+    00741 C0D8      RJMP	0x081A
+(0190) 	
+(0191) 	
+(0192) 	else
+(0193) 	{
+(0194) 		if(note_n == music2_Max_note)	//重头开始播放音乐
+    00742 9180 007B LDS	R24,note_n
+    00744 3588      CPI	R24,0x58
+    00745 F451      BNE	0x0750
+(0195) 		{
+(0196) 			note_n = 0;
+    00746 2422      CLR	R2
+    00747 9220 007B STS	note_n,R2
+(0197) 			int_n = 1;
+    00749 E081      LDI	R24,1
+    0074A E090      LDI	R25,0
+    0074B 9390 007D STS	int_n+1,R25
+    0074D 9380 007C STS	int_n,R24
+(0198) 		}
+    0074F C0CA      RJMP	0x081A
+(0199) 		else
+(0200) 		{
+(0201) 			if(--int_n == 0)	//播放完一个音符
+    00750 9180 007C LDS	R24,int_n
+    00752 9190 007D LDS	R25,int_n+1
+    00754 9701      SBIW	R24,1
+    00755 011C      MOVW	R2,R24
+    00756 9230 007D STS	int_n+1,R3
+    00758 9220 007C STS	int_n,R2
+    0075A 3080      CPI	R24,0
+    0075B 0789      CPC	R24,R25
+    0075C F009      BEQ	0x075E
+    0075D C0AB      RJMP	0x0809
+(0202) 			{
+(0203) 				if(music1[note_n] == 0)	//无声音一段时间
+    0075E E78C      LDI	R24,0x7C
+    0075F E092      LDI	R25,2
+    00760 91E0 007B LDS	R30,note_n
+    00762 27FF      CLR	R31
+    00763 0FE8      ADD	R30,R24
+    00764 1FF9      ADC	R31,R25
+    00765 9024      LPM	R2,Z
+    00766 2022      TST	R2
+    00767 F009      BEQ	0x0769
+    00768 C044      RJMP	0x07AD
+(0204) 				{
+(0205) 					sound_flag = 0;
+    00769 2422      CLR	R2
+    0076A 9220 007E STS	sound_flag,R2
+(0206) 					TCCR1B = 0x08;	//timer1停止工作
+    0076C E088      LDI	R24,0x8
+    0076D BD8E      OUT	0x2E,R24
+(0207) 					PORTA |= (1 << 3);	//关闭蜂鸣器
+    0076E 9ADB      SBI	0x1B,3
+(0208) 					OCR1A = t[1] / period_rate;
+    0076F 9100 0062 LDS	R16,t+2
+    00771 9110 0063 LDS	R17,t+3
+    00773 940E 12A4 CALL	uint2fp
+    00775 0118      MOVW	R2,R16
+    00776 0129      MOVW	R4,R18
+    00777 EC08      LDI	R16,0xC8
+    00778 E016      LDI	R17,6
+    00779 940E 1258 CALL	lpm32
+    0077B 933A      ST	-Y,R19
+    0077C 932A      ST	-Y,R18
+    0077D 931A      ST	-Y,R17
+    0077E 930A      ST	-Y,R16
+    0077F 0181      MOVW	R16,R2
+    00780 0192      MOVW	R18,R4
+    00781 940E 12D1 CALL	fpdiv2
+    00783 940E 1272 CALL	fpint
+    00785 BD1B      OUT	0x2B,R17
+    00786 BD0A      OUT	0x2A,R16
+(0209) 					int_n = d[1] * note_rate;
+    00787 9020 0073 LDS	R2,d+1
+    00789 2433      CLR	R3
+    0078A 0C22      LSL	R2
+    0078B 1C33      ROL	R3
+    0078C 9230 007D STS	int_n+1,R3
+    0078E 9220 007C STS	int_n,R2
+(0210) 					note_n++;
+    00790 9180 007B LDS	R24,note_n
+    00792 5F8F      SUBI	R24,0xFF
+    00793 9380 007B STS	note_n,R24
+(0211) 					int_n = int_n * music2[note_n];
+    00795 E780      LDI	R24,0x70
+    00796 E094      LDI	R25,4
+    00797 91E0 007B LDS	R30,note_n
+    00799 27FF      CLR	R31
+    0079A 0FE8      ADD	R30,R24
+    0079B 1FF9      ADC	R31,R25
+    0079C 9124      LPM	R18,Z
+    0079D 2733      CLR	R19
+    0079E 0181      MOVW	R16,R2
+    0079F 940E 11E7 CALL	empy16s
+    007A1 9310 007D STS	int_n+1,R17
+    007A3 9300 007C STS	int_n,R16
+(0212) 					note_n++;
+    007A5 9180 007B LDS	R24,note_n
+    007A7 5F8F      SUBI	R24,0xFF
+    007A8 9380 007B STS	note_n,R24
+(0213) 					TCCR1B = 0x0A;	//启动timer1，播放下一个音符
+    007AA E08A      LDI	R24,0xA
+    007AB BD8E      OUT	0x2E,R24
+(0214) 				}
+    007AC C06D      RJMP	0x081A
+(0215) 				else
+(0216) 				{
+(0217) 					sound_flag = 1;
+    007AD E081      LDI	R24,1
+    007AE 9380 007E STS	sound_flag,R24
+(0218) 					TCCR1B = 0x08;	//timer1停止工作
+    007B0 E088      LDI	R24,0x8
+    007B1 BD8E      OUT	0x2E,R24
+(0219) 					OCR1A = t[music2[note_n]] / period_rate;//取下一个音符
+    007B2 E780      LDI	R24,0x70
+    007B3 E094      LDI	R25,4
+    007B4 91E0 007B LDS	R30,note_n
+    007B6 27FF      CLR	R31
+    007B7 0FE8      ADD	R30,R24
+    007B8 1FF9      ADC	R31,R25
+    007B9 91E4      LPM	R30,Z
+    007BA 27FF      CLR	R31
+    007BB 0FEE      LSL	R30
+    007BC 1FFF      ROL	R31
+    007BD E680      LDI	R24,0x60
+    007BE E090      LDI	R25,0
+    007BF 0FE8      ADD	R30,R24
+    007C0 1FF9      ADC	R31,R25
+    007C1 8100      LD	R16,Z
+    007C2 8111      LDD	R17,Z+1
+    007C3 940E 12A4 CALL	uint2fp
+    007C5 0118      MOVW	R2,R16
+    007C6 0129      MOVW	R4,R18
+    007C7 EC08      LDI	R16,0xC8
+    007C8 E016      LDI	R17,6
+    007C9 940E 1258 CALL	lpm32
+    007CB 933A      ST	-Y,R19
+    007CC 932A      ST	-Y,R18
+    007CD 931A      ST	-Y,R17
+    007CE 930A      ST	-Y,R16
+    007CF 0181      MOVW	R16,R2
+    007D0 0192      MOVW	R18,R4
+    007D1 940E 12D1 CALL	fpdiv2
+    007D3 940E 1272 CALL	fpint
+    007D5 BD1B      OUT	0x2B,R17
+    007D6 BD0A      OUT	0x2A,R16
+(0220) 					int_n = d[music2[note_n]] * note_rate;//取该音符的基本节拍单位
+    007D7 E780      LDI	R24,0x70
+    007D8 E094      LDI	R25,4
+    007D9 91E0 007B LDS	R30,note_n
+    007DB 27FF      CLR	R31
+    007DC 0FE8      ADD	R30,R24
+    007DD 1FF9      ADC	R31,R25
+    007DE 91E4      LPM	R30,Z
+    007DF 27FF      CLR	R31
+    007E0 E782      LDI	R24,0x72
+    007E1 E090      LDI	R25,0
+    007E2 0FE8      ADD	R30,R24
+    007E3 1FF9      ADC	R31,R25
+    007E4 8020      LD	R2,Z
+    007E5 2433      CLR	R3
+    007E6 0C22      LSL	R2
+    007E7 1C33      ROL	R3
+    007E8 9230 007D STS	int_n+1,R3
+    007EA 9220 007C STS	int_n,R2
+(0221) 					note_n++;
+    007EC 9180 007B LDS	R24,note_n
+    007EE 5F8F      SUBI	R24,0xFF
+    007EF 9380 007B STS	note_n,R24
+(0222) 					int_n = int_n * music2[note_n];	//计算该音符的节拍值
+    007F1 E780      LDI	R24,0x70
+    007F2 E094      LDI	R25,4
+    007F3 91E0 007B LDS	R30,note_n
+    007F5 27FF      CLR	R31
+    007F6 0FE8      ADD	R30,R24
+    007F7 1FF9      ADC	R31,R25
+    007F8 9124      LPM	R18,Z
+    007F9 2733      CLR	R19
+    007FA 0181      MOVW	R16,R2
+    007FB 940E 11E7 CALL	empy16s
+    007FD 9310 007D STS	int_n+1,R17
+    007FF 9300 007C STS	int_n,R16
+(0223) 					note_n++;
+    00801 9180 007B LDS	R24,note_n
+    00803 5F8F      SUBI	R24,0xFF
+    00804 9380 007B STS	note_n,R24
+(0224) 					TCCR1B = 0x0A;		//启动timer1，播放下一个音符
+    00806 E08A      LDI	R24,0xA
+    00807 BD8E      OUT	0x2E,R24
+(0225) 				}
+(0226) 			}
+    00808 C011      RJMP	0x081A
+(0227) 			else
+(0228) 			{
+(0229) 				if(sound_flag)
+    00809 9020 007E LDS	R2,sound_flag
+    0080B 2022      TST	R2
+    0080C F069      BEQ	0x081A
+(0230) 				{
+(0231) 					if(flag)
+    0080D 9020 007F LDS	R2,flag
+    0080F 2022      TST	R2
+    00810 F029      BEQ	0x0816
+(0232) 					{
+(0233) 						PORTA &= ~(1<<3);
+    00811 98DB      CBI	0x1B,3
+(0234) 						flag = 0;
+    00812 2422      CLR	R2
+    00813 9220 007F STS	flag,R2
+(0235) 					}
+    00815 C004      RJMP	0x081A
+(0236) 					else
+(0237) 					{
+(0238) 						PORTA |= (1<<3);
+    00816 9ADB      SBI	0x1B,3
+(0239) 						flag = 1;
+    00817 E081      LDI	R24,1
+    00818 9380 007F STS	flag,R24
+(0240) 					}
+(0241) 				}
+(0242) 			}
+(0243) 		}
+(0244) 	}
+    0081A 9019      LD	R1,Y+
+    0081B BE1F      OUT	0x3F,R1
+    0081C 91F9      LD	R31,Y+
+    0081D 91E9      LD	R30,Y+
+    0081E 9199      LD	R25,Y+
+    0081F 9189      LD	R24,Y+
+    00820 9139      LD	R19,Y+
+    00821 9129      LD	R18,Y+
+    00822 9119      LD	R17,Y+
+    00823 9109      LD	R16,Y+
+    00824 9059      LD	R5,Y+
+    00825 9049      LD	R4,Y+
+    00826 9039      LD	R3,Y+
+    00827 9029      LD	R2,Y+
+    00828 9019      LD	R1,Y+
+    00829 9518      RETI
+_delay_ms:
+  num                  --> R20
+  delay_i              --> R16
+    0082A 934A      ST	-Y,R20
+(0245) 	
+(0246) 	
+(0247) }
+(0248) 
+(0249) 
+(0250) 
+(0251) 
+(0252) void delay_ms(unsigned int delay_i)
+(0253) {
+    0082B C008      RJMP	0x0834
+(0254) 	unsigned char num;
+(0255) 	while(delay_i > 0)
+(0256) 	{
+(0257) 		for(num = 0;num < 187;num++)
+    0082C 2744      CLR	R20
+    0082D C002      RJMP	0x0830
+(0258) 		{
+(0259) 			asm("nop");
+    0082E 0000      NOP
+    0082F 9543      INC	R20
+    00830 3B4B      CPI	R20,0xBB
+    00831 F3E0      BCS	0x082E
+(0260) 		}
+(0261) 		delay_i--;
+    00832 5001      SUBI	R16,1
+    00833 4010      SBCI	R17,0
+    00834 3000      CPI	R16,0
+    00835 0701      CPC	R16,R17
+    00836 F7A9      BNE	0x082C
+    00837 9149      LD	R20,Y+
+    00838 9508      RET
+_read_key:
+  key_press            --> R18
+  key_return           --> R16
+    00839 934A      ST	-Y,R20
+    0083A 935A      ST	-Y,R21
+(0262) 	}
+(0263) }
+(0264) 
+(0265) unsigned char read_key(void)
+(0266) {
+(0267) 	static unsigned char key_state = 0,key_time;
+(0268) 	unsigned char key_press,key_return = nokey;
+    0083B 2700      CLR	R16
+(0269) 
+(0270) 	key_press = key_input;//读取按键电平
+    0083C B389      IN	R24,0x19
+    0083D 7880      ANDI	R24,0x80
+    0083E B320      IN	R18,0x10
+    0083F 7028      ANDI	R18,0x8
+    00840 2B28      OR	R18,R24
+(0271) 	switch(key_state)
+    00841 9140 00AF LDS	R20,LCD.c:key_state
+    00843 2755      CLR	R21
+    00844 3040      CPI	R20,0
+    00845 0745      CPC	R20,R21
+    00846 F071      BEQ	0x0855
+    00847 3041      CPI	R20,1
+    00848 E0E0      LDI	R30,0
+    00849 075E      CPC	R21,R30
+    0084A F089      BEQ	0x085C
+    0084B 3042      CPI	R20,2
+    0084C E0E0      LDI	R30,0
+    0084D 075E      CPC	R21,R30
+    0084E F111      BEQ	0x0871
+    0084F 3043      CPI	R20,3
+    00850 E0E0      LDI	R30,0
+    00851 075E      CPC	R21,R30
+    00852 F409      BNE	0x0854
+    00853 C036      RJMP	0x088A
+    00854 C049      RJMP	0x089E
+(0272) 	{
+(0273) 		case key_state_0:
+(0274) 			if(key_press != 0x88)	//按键按下，转确认状态
+    00855 3828      CPI	R18,0x88
+    00856 F409      BNE	0x0858
+    00857 C046      RJMP	0x089E
+(0275) 				key_state = key_state_1;
+    00858 E081      LDI	R24,1
+    00859 9380 00AF STS	LCD.c:key_state,R24
+(0276) 			break;
+    0085B C042      RJMP	0x089E
+(0277) 		case key_state_1:
+(0278) 			if(key_press != 0x88)
+    0085C 3828      CPI	R18,0x88
+    0085D F079      BEQ	0x086D
+(0279) 			{
+(0280) 				if(key_press == 0x80)	//SW8按键按下，因为无长按，所以直接转状态3判定是否松开
+    0085E 3820      CPI	R18,0x80
+    0085F F421      BNE	0x0864
+(0281) 				{
+(0282) 					key_state = key_state_3;
+    00860 E083      LDI	R24,3
+    00861 9380 00AF STS	LCD.c:key_state,R24
+(0283) 					key_return = SW8;
+    00863 E001      LDI	R16,1
+(0284) 				}
+(0285) 				if(key_press == 0x08)	//key1按下，转状态2判定为长按还是短按
+    00864 3028      CPI	R18,0x8
+    00865 F5C1      BNE	0x089E
+(0286) 				{	
+(0287) 					key_state = key_state_2;
+    00866 E082      LDI	R24,2
+    00867 9380 00AF STS	LCD.c:key_state,R24
+(0288) 					key_time = 0;
+    00869 2422      CLR	R2
+    0086A 9220 0161 STS	LCD.c:key_time,R2
+(0289) 				}
+(0290) 			}
+    0086C C031      RJMP	0x089E
+(0291) 			else				//按键无按下（抖动）
+(0292) 				key_state = key_state_0;
+    0086D 2422      CLR	R2
+    0086E 9220 00AF STS	LCD.c:key_state,R2
+(0293) 			break;
+    00870 C02D      RJMP	0x089E
+(0294) 		case key_state_2:
+(0295) 			if(key_press == 0x88)	//按下时间不过1S，为短按
+    00871 3828      CPI	R18,0x88
+    00872 F439      BNE	0x087A
+(0296) 			{	
+(0297) 				key_state = key_state_0;
+    00873 2422      CLR	R2
+    00874 9220 00AF STS	LCD.c:key_state,R2
+(0298) 				key_time = 0;
+    00876 9220 0161 STS	LCD.c:key_time,R2
+(0299) 				key_return = key1_short;
+    00878 E002      LDI	R16,2
+(0300) 			}
+    00879 C024      RJMP	0x089E
+(0301) 			else if((++key_time) >= 100)	//按下时间超过1S，为长按
+    0087A 9180 0161 LDS	R24,LCD.c:key_time
+    0087C 5F8F      SUBI	R24,0xFF
+    0087D 2E28      MOV	R2,R24
+    0087E 9220 0161 STS	LCD.c:key_time,R2
+    00880 3684      CPI	R24,0x64
+    00881 F0E0      BCS	0x089E
+(0302) 			{
+(0303) 				key_state = key_state_3;
+    00882 E083      LDI	R24,3
+    00883 9380 00AF STS	LCD.c:key_state,R24
+(0304) 				key_time = 0;
+    00885 2422      CLR	R2
+    00886 9220 0161 STS	LCD.c:key_time,R2
+(0305) 				key_return = key1_long;
+    00888 E003      LDI	R16,3
+(0306) 			}
+(0307) 			break;
+    00889 C014      RJMP	0x089E
+(0308) 		case key_state_3:
+(0309) 			if(key_press == 0x88)	//无按键按下了
+    0088A 3828      CPI	R18,0x88
+    0088B F421      BNE	0x0890
+(0310) 				key_state = 0;
+    0088C 2422      CLR	R2
+    0088D 9220 00AF STS	LCD.c:key_state,R2
+    0088F C00E      RJMP	0x089E
+(0311) 			else if(((++key_time) >= 50)  && (key_press == 0x08))	//key1长按后每隔0.5S为下一次长按
+    00890 9180 0161 LDS	R24,LCD.c:key_time
+    00892 5F8F      SUBI	R24,0xFF
+    00893 2E28      MOV	R2,R24
+    00894 9220 0161 STS	LCD.c:key_time,R2
+    00896 3382      CPI	R24,0x32
+    00897 F030      BCS	0x089E
+    00898 3028      CPI	R18,0x8
+    00899 F421      BNE	0x089E
+(0312) 			{
+(0313) 				key_time = 0;
+    0089A 2422      CLR	R2
+    0089B 9220 0161 STS	LCD.c:key_time,R2
+(0314) 				key_return = key1_long;
+    0089D E003      LDI	R16,3
+(0315) 			}
+(0316) 			break;
+(0317) 	}
+(0318) 	return key_return;
+    0089E 9159      LD	R21,Y+
+    0089F 9149      LD	R20,Y+
+    008A0 9508      RET
+_HC595_send_byte:
+  i                    --> R20
+  SndData              --> R10
+    008A1 92AA      ST	-Y,R10
+    008A2 934A      ST	-Y,R20
+    008A3 2EA0      MOV	R10,R16
+(0319) }
+(0320) 
+(0321) void HC595_send_byte(unsigned char SndData)
+(0322) {
+(0323)     //完成595的驱动函数，实现通过595把串行数据发送到Q0——Q7
+(0324) 	unsigned char i;
+(0325) 	for(i=0;i<8;i++)
+    008A4 2744      CLR	R20
+    008A5 C00E      RJMP	0x08B4
+(0326) 	{
+(0327) 	 	if((SndData&(1<<(7-i)))==0)
+    008A6 E017      LDI	R17,7
+    008A7 1B14      SUB	R17,R20
+    008A8 E001      LDI	R16,1
+    008A9 940E 126C CALL	lsl8
+    008AB 2C2A      MOV	R2,R10
+    008AC 2220      AND	R2,R16
+    008AD F411      BNE	0x08B0
+(0328) 			CLR_DS();
+    008AE 98D8      CBI	0x1B,0
+    008AF C001      RJMP	0x08B1
+(0329) 		else
+(0330) 			SET_DS();
+    008B0 9AD8      SBI	0x1B,0
+(0331) 		CLR_SHCLK();
+    008B1 98C1      CBI	0x18,1
+(0332) 		SET_SHCLK();
+    008B2 9AC1      SBI	0x18,1
+    008B3 9543      INC	R20
+    008B4 3048      CPI	R20,0x8
+    008B5 F380      BCS	0x08A6
+(0333) 	}
+(0334) 	CLR_STCLK();
+    008B6 98C0      CBI	0x18,0
+(0335) 	SET_STCLK();
+    008B7 9AC0      SBI	0x18,0
+    008B8 9149      LD	R20,Y+
+    008B9 90A9      LD	R10,Y+
+    008BA 9508      RET
+(0336) }
+(0337) 
+(0338) void port_init(void)
+(0339) {
+(0340)  //添加GPIO初始化
+(0341) 	DDRA |= (1<<4)|(1<<5)|(1<<6);
+_port_init:
+    008BB B38A      IN	R24,0x1A
+    008BC 6780      ORI	R24,0x70
+    008BD BB8A      OUT	0x1A,R24
+(0342) 	DDRB |= (1<<4)|(1<<5)|(1<<7);
+    008BE B387      IN	R24,0x17
+    008BF 6B80      ORI	R24,0xB0
+    008C0 BB87      OUT	0x17,R24
+(0343)  
+(0344) 	DDRA|=(1<<0);
+    008C1 9AD0      SBI	0x1A,0
+(0345) 	DDRA&=~(1<<7);
+    008C2 98D7      CBI	0x1A,7
+(0346) 	PORTA|=(1<<7);
+    008C3 9ADF      SBI	0x1B,7
+(0347) 	DDRB|=(1<<0)|(1<<1);
+    008C4 B387      IN	R24,0x17
+    008C5 6083      ORI	R24,3
+    008C6 BB87      OUT	0x17,R24
+(0348) 	PORTB|=(1<<1);
+    008C7 9AC1      SBI	0x18,1
+(0349) 	DDRD|=0xf0;
+    008C8 B381      IN	R24,0x11
+    008C9 6F80      ORI	R24,0xF0
+    008CA BB81      OUT	0x11,R24
+(0350) 	PORTD&=0X0F;
+    008CB B382      IN	R24,0x12
+    008CC 708F      ANDI	R24,0xF
+    008CD BB82      OUT	0x12,R24
+(0351) 	DDRD&=~(1<<3);
+    008CE 988B      CBI	0x11,3
+(0352) 	PORTD|=(1<<3);
+    008CF 9A93      SBI	0x12,3
+(0353) 	
+(0354) 	DDRA |= (1 << 3);
+    008D0 9AD3      SBI	0x1A,3
+(0355) 	PORTA |= (1 << 3);
+    008D1 9ADB      SBI	0x1B,3
+    008D2 9508      RET
+(0356) }
+(0357) 
+(0358) void timer0_init(void)
+(0359) {
+(0360) 	TCCR0 = 0x00; //stop
+_timer0_init:
+    008D3 2422      CLR	R2
+    008D4 BE23      OUT	0x33,R2
+(0361) 	TCNT0 = 0x1A; //set count
+    008D5 E18A      LDI	R24,0x1A
+    008D6 BF82      OUT	0x32,R24
+(0362) 	OCR0  = 0xE6;  //set compare
+    008D7 EE86      LDI	R24,0xE6
+    008D8 BF8C      OUT	0x3C,R24
+(0363) 	TCCR0 = 0x03; //start timer
+    008D9 E083      LDI	R24,3
+    008DA BF83      OUT	0x33,R24
+    008DB 9508      RET
+_timer0_ovf_isr:
+    008DC 920A      ST	-Y,R0
+    008DD 921A      ST	-Y,R1
+    008DE 922A      ST	-Y,R2
+    008DF 923A      ST	-Y,R3
+    008E0 924A      ST	-Y,R4
+    008E1 925A      ST	-Y,R5
+    008E2 926A      ST	-Y,R6
+    008E3 927A      ST	-Y,R7
+    008E4 928A      ST	-Y,R8
+    008E5 929A      ST	-Y,R9
+    008E6 930A      ST	-Y,R16
+    008E7 931A      ST	-Y,R17
+    008E8 932A      ST	-Y,R18
+    008E9 933A      ST	-Y,R19
+    008EA 938A      ST	-Y,R24
+    008EB 939A      ST	-Y,R25
+    008EC 93AA      ST	-Y,R26
+    008ED 93BA      ST	-Y,R27
+    008EE 93EA      ST	-Y,R30
+    008EF 93FA      ST	-Y,R31
+    008F0 B60F      IN	R0,0x3F
+    008F1 920A      ST	-Y,R0
+    008F2 934A      ST	-Y,R20
+    008F3 935A      ST	-Y,R21
+(0364) }
+(0365) 
+(0366) #pragma interrupt_handler timer0_ovf_isr:iv_TIM0_OVF
+(0367) void timer0_ovf_isr(void)
+(0368) {
+(0369) 	TCNT0 = 0x1A; //reload counter value
+    008F4 E18A      LDI	R24,0x1A
+    008F5 BF82      OUT	0x32,R24
+(0370) 	PORTD|=0xf0;
+    008F6 B382      IN	R24,0x12
+    008F7 6F80      ORI	R24,0xF0
+    008F8 BB82      OUT	0x12,R24
+(0371) 	//正常计数时，正常送数，点亮对应的数码管
+(0372) 	//进行调时时，正常送数，每隔0.3秒点亮对应数码管，实现闪烁功能
+(0373) 	if(post == 1)
+    008F9 9180 0095 LDS	R24,post
+    008FB 3081      CPI	R24,1
+    008FC F489      BNE	0x090E
+(0374) 		HC595_send_byte(led_7[disp_buff[post]] & ~(1<<7));
+    008FD E981      LDI	R24,0x91
+    008FE E090      LDI	R25,0
+    008FF 91E0 0095 LDS	R30,post
+    00901 27FF      CLR	R31
+    00902 0FE8      ADD	R30,R24
+    00903 1FF9      ADC	R31,R25
+    00904 81E0      LD	R30,Z
+    00905 27FF      CLR	R31
+    00906 E881      LDI	R24,0x81
+    00907 E090      LDI	R25,0
+    00908 0FE8      ADD	R30,R24
+    00909 1FF9      ADC	R31,R25
+    0090A 8100      LD	R16,Z
+    0090B 770F      ANDI	R16,0x7F
+    0090C DF94      RCALL	_HC595_send_byte
+    0090D C00F      RJMP	0x091D
+(0375) 	else
+(0376) 		HC595_send_byte(led_7[disp_buff[post]]);
+    0090E E981      LDI	R24,0x91
+    0090F E090      LDI	R25,0
+    00910 91E0 0095 LDS	R30,post
+    00912 27FF      CLR	R31
+    00913 0FE8      ADD	R30,R24
+    00914 1FF9      ADC	R31,R25
+    00915 81E0      LD	R30,Z
+    00916 27FF      CLR	R31
+    00917 E881      LDI	R24,0x81
+    00918 E090      LDI	R25,0
+    00919 0FE8      ADD	R30,R24
+    0091A 1FF9      ADC	R31,R25
+    0091B 8100      LD	R16,Z
+    0091C DF84      RCALL	_HC595_send_byte
+(0377) 	if(isflash == secflash && time_300ms_ok && (post == 2 || post == 3))
+    0091D 9180 009D LDS	R24,isflash
+    0091F 3081      CPI	R24,1
+    00920 F479      BNE	0x0930
+    00921 9020 0099 LDS	R2,time_300ms_ok
+    00923 2022      TST	R2
+    00924 F059      BEQ	0x0930
+    00925 9020 0095 LDS	R2,post
+    00927 2D82      MOV	R24,R2
+    00928 3082      CPI	R24,2
+    00929 F011      BEQ	0x092C
+    0092A 3083      CPI	R24,3
+    0092B F421      BNE	0x0930
+(0378) 		PORTD |= 0XF0;
+    0092C B382      IN	R24,0x12
+    0092D 6F80      ORI	R24,0xF0
+    0092E BB82      OUT	0x12,R24
+    0092F C01F      RJMP	0x094F
+(0379) 	else if(isflash == minflash && time_300ms_ok && (post == 0 || post == 1))
+    00930 9180 009D LDS	R24,isflash
+    00932 3082      CPI	R24,2
+    00933 F479      BNE	0x0943
+    00934 9020 0099 LDS	R2,time_300ms_ok
+    00936 2022      TST	R2
+    00937 F059      BEQ	0x0943
+    00938 9020 0095 LDS	R2,post
+    0093A 2022      TST	R2
+    0093B F019      BEQ	0x093F
+    0093C 2D82      MOV	R24,R2
+    0093D 3081      CPI	R24,1
+    0093E F421      BNE	0x0943
+(0380) 		PORTD |= 0XF0;
+    0093F B382      IN	R24,0x12
+    00940 6F80      ORI	R24,0xF0
+    00941 BB82      OUT	0x12,R24
+    00942 C00C      RJMP	0x094F
+(0381) 	else
+(0382) 		PORTD&=~(1<<(7-post));
+    00943 9020 0095 LDS	R2,post
+    00945 E017      LDI	R17,7
+    00946 1912      SUB	R17,R2
+    00947 E001      LDI	R16,1
+    00948 940E 126C CALL	lsl8
+    0094A 2E20      MOV	R2,R16
+    0094B 9420      COM	R2
+    0094C B232      IN	R3,0x12
+    0094D 2032      AND	R3,R2
+    0094E BA32      OUT	0x12,R3
+(0383) 	if(++post>=4)
+    0094F 9140 0095 LDS	R20,post
+    00951 5F4F      SUBI	R20,0xFF
+    00952 9340 0095 STS	post,R20
+    00954 3044      CPI	R20,4
+    00955 F018      BCS	0x0959
+(0384) 		post=0;
+    00956 2422      CLR	R2
+    00957 9220 0095 STS	post,R2
+(0385) 	if(++time_10ms_count >= 5)
+    00959 9140 0096 LDS	R20,time_10ms_count
+    0095B 5F4F      SUBI	R20,0xFF
+    0095C 9340 0096 STS	time_10ms_count,R20
+    0095E 3045      CPI	R20,5
+    0095F F030      BCS	0x0966
+(0386) 	{
+(0387) 		time_10ms_ok = 1;
+    00960 E081      LDI	R24,1
+    00961 9380 0097 STS	time_10ms_ok,R24
+(0388) 		time_10ms_count = 0;
+    00963 2422      CLR	R2
+    00964 9220 0096 STS	time_10ms_count,R2
+(0389) 	}
+(0390) 	if(++time_300ms_count >= 150)
+    00966 9140 0098 LDS	R20,time_300ms_count
+    00968 5F4F      SUBI	R20,0xFF
+    00969 9340 0098 STS	time_300ms_count,R20
+    0096B 3946      CPI	R20,0x96
+    0096C F040      BCS	0x0975
+(0391) 	{
+(0392) 		time_300ms_ok = ~time_300ms_ok;
+    0096D 9020 0099 LDS	R2,time_300ms_ok
+    0096F 9420      COM	R2
+    00970 9220 0099 STS	time_300ms_ok,R2
+(0393) 		time_300ms_count = 0;
+    00972 2422      CLR	R2
+    00973 9220 0098 STS	time_300ms_count,R2
+(0394) 	}
+(0395) 	if(++time_1s_count >= 500)
+    00975 9140 009A LDS	R20,time_1s_count
+    00977 9150 009B LDS	R21,time_1s_count+1
+    00979 5F4F      SUBI	R20,0xFF
+    0097A 4F5F      SBCI	R21,0xFF
+    0097B 9350 009B STS	time_1s_count+1,R21
+    0097D 9340 009A STS	time_1s_count,R20
+    0097F 3F44      CPI	R20,0xF4
+    00980 E0E1      LDI	R30,1
+    00981 075E      CPC	R21,R30
+    00982 F048      BCS	0x098C
+(0396) 	{
+(0397) 		time_1s_ok = 1;
+    00983 E081      LDI	R24,1
+    00984 9380 009C STS	time_1s_ok,R24
+(0398) 		time_1s_count = 0;
+    00986 2422      CLR	R2
+    00987 2433      CLR	R3
+    00988 9230 009B STS	time_1s_count+1,R3
+    0098A 9220 009A STS	time_1s_count,R2
+(0399) 	}
+    0098C 9159      LD	R21,Y+
+    0098D 9149      LD	R20,Y+
+    0098E 9009      LD	R0,Y+
+    0098F BE0F      OUT	0x3F,R0
+    00990 91F9      LD	R31,Y+
+    00991 91E9      LD	R30,Y+
+    00992 91B9      LD	R27,Y+
+    00993 91A9      LD	R26,Y+
+    00994 9199      LD	R25,Y+
+    00995 9189      LD	R24,Y+
+    00996 9139      LD	R19,Y+
+    00997 9129      LD	R18,Y+
+    00998 9119      LD	R17,Y+
+    00999 9109      LD	R16,Y+
+    0099A 9099      LD	R9,Y+
+    0099B 9089      LD	R8,Y+
+    0099C 9079      LD	R7,Y+
+    0099D 9069      LD	R6,Y+
+    0099E 9059      LD	R5,Y+
+    0099F 9049      LD	R4,Y+
+    009A0 9039      LD	R3,Y+
+    009A1 9029      LD	R2,Y+
+    009A2 9019      LD	R1,Y+
+    009A3 9009      LD	R0,Y+
+    009A4 9518      RETI
+(0400) }
+(0401)  
+(0402) 
+(0403) //UART0 initialize
+(0404) // desired baud rate: 9600
+(0405) // actual: baud rate:9600 (0.0%)
+(0406) void uart0_init(void)
+(0407) {
+(0408)  UCSRB = 0x00; //disable while setting baud rate
+_uart0_init:
+    009A5 2422      CLR	R2
+    009A6 B82A      OUT	0x0A,R2
+(0409)  UCSRA = 0x00;
+    009A7 B82B      OUT	0x0B,R2
+(0410)  UCSRC = BIT(URSEL) | 0x06;
+    009A8 E886      LDI	R24,0x86
+    009A9 BD80      OUT	0x20,R24
+(0411)  UBRRL = 0x2F; //set baud rate lo
+    009AA E28F      LDI	R24,0x2F
+    009AB B989      OUT	0x09,R24
+(0412)  UBRRH = 0x00; //set baud rate hi
+    009AC BC20      OUT	0x20,R2
+(0413)  UCSRB = 0x18;
+    009AD E188      LDI	R24,0x18
+    009AE B98A      OUT	0x0A,R24
+    009AF 9508      RET
+(0414) }
+(0415) //SPI initialize
+(0416) // clock rate: 1843199hz
+(0417) void spi_init(void)
+(0418) {
+(0419)  //SPI初始化
+(0420)  SPCR |= (1<<6)|(1<<4);
+_spi_init:
+    009B0 B18D      IN	R24,0x0D
+    009B1 6580      ORI	R24,0x50
+    009B2 B98D      OUT	0x0D,R24
+    009B3 9508      RET
+(0421) }
+(0422) 
+(0423) //call this routine to initialize all peripherals
+(0424) void init_devices(void)
+(0425) {
+(0426)  //stop errant interrupts until set up
+(0427)  CLI(); //disable all interrupts
+_init_devices:
+    009B4 94F8      BCLR	7
+(0428)  port_init();
+    009B5 DF05      RCALL	_port_init
+(0429)  spi_init();
+    009B6 DFF9      RCALL	_spi_init
+(0430)  uart0_init();
+    009B7 DFED      RCALL	_uart0_init
+(0431)  timer0_init();
+    009B8 DF1A      RCALL	_timer0_init
+(0432)  timer1_init();
+    009B9 DC97      RCALL	_timer1_init
+(0433) 
+(0434)  MCUCR = 0x00;
+    009BA 2422      CLR	R2
+    009BB BE25      OUT	0x35,R2
+(0435)  GICR  = 0x00;
+    009BC BE2B      OUT	0x3B,R2
+(0436)  TIMSK = 0x01; //timer interrupt sources
+    009BD E081      LDI	R24,1
+    009BE BF89      OUT	0x39,R24
+(0437)  TIMSK |= 0x10;
+    009BF B789      IN	R24,0x39
+    009C0 6180      ORI	R24,0x10
+    009C1 BF89      OUT	0x39,R24
+(0438)  SEI(); //re-enable interrupts
+    009C2 9478      BSET	7
+    009C3 9508      RET
+(0439)  //all peripherals are now initialized
+(0440) }
+(0441) 
+(0442) void UARTSend(unsigned char data)
+(0443) {
+(0444)     while ( !( UCSRA & (1<<UDRE)) );
+_UARTSend:
+  data                 --> R16
+    009C4 9B5D      SBIS	0x0B,5
+    009C5 CFFE      RJMP	_UARTSend
+(0445)     UDR = data;
+    009C6 B90C      OUT	0x0C,R16
+    009C7 9508      RET
+(0446) }
+(0447) 
+(0448) 
+(0449) 
+(0450) void plane_left_move()
+(0451) {
+(0452) 	LCD_set_XY(plane_x,plane_y);		//清除飞机残影
+_plane_left_move:
+    009C8 9120 00AC LDS	R18,plane_y
+    009CA 2733      CLR	R19
+    009CB 9100 00AB LDS	R16,plane_x
+    009CD 2711      CLR	R17
+    009CE 940E 059F CALL	_LCD_set_XY
+(0453) 	LCD_write_byte(0x00,1);
+    009D0 E021      LDI	R18,1
+    009D1 E030      LDI	R19,0
+    009D2 2700      CLR	R16
+    009D3 2711      CLR	R17
+    009D4 940E 05DE CALL	_LCD_write_byte
+(0454) 	LCD_write_byte(0x00,1);
+    009D6 E021      LDI	R18,1
+    009D7 E030      LDI	R19,0
+    009D8 2700      CLR	R16
+    009D9 2711      CLR	R17
+    009DA 940E 05DE CALL	_LCD_write_byte
+(0455) 	LCD_write_byte(0x00,1);
+    009DC E021      LDI	R18,1
+    009DD E030      LDI	R19,0
+    009DE 2700      CLR	R16
+    009DF 2711      CLR	R17
+    009E0 940E 05DE CALL	_LCD_write_byte
+(0456) 	LCD_write_byte(0x00,1);
+    009E2 E021      LDI	R18,1
+    009E3 E030      LDI	R19,0
+    009E4 2700      CLR	R16
+    009E5 2711      CLR	R17
+    009E6 940E 05DE CALL	_LCD_write_byte
+(0457) 	if(plane_x > 0)
+    009E8 E080      LDI	R24,0
+    009E9 9020 00AB LDS	R2,plane_x
+    009EB 1582      CP	R24,R2
+    009EC F420      BCC	0x09F1
+(0458) 		plane_x--;
+    009ED 2D82      MOV	R24,R2
+    009EE 5081      SUBI	R24,1
+    009EF 9380 00AB STS	plane_x,R24
+(0459) 	LCD_set_XY(plane_x,plane_y);		//画出移动后的飞机
+    009F1 9120 00AC LDS	R18,plane_y
+    009F3 2733      CLR	R19
+    009F4 9100 00AB LDS	R16,plane_x
+    009F6 2711      CLR	R17
+    009F7 940E 059F CALL	_LCD_set_XY
+(0460) 	LCD_write_byte(0xf8,1);
+    009F9 E021      LDI	R18,1
+    009FA E030      LDI	R19,0
+    009FB EF08      LDI	R16,0xF8
+    009FC E010      LDI	R17,0
+    009FD 940E 05DE CALL	_LCD_write_byte
+(0461) 	LCD_write_byte(0x20,1);
+    009FF E021      LDI	R18,1
+    00A00 E030      LDI	R19,0
+    00A01 E200      LDI	R16,0x20
+    00A02 E010      LDI	R17,0
+    00A03 940E 05DE CALL	_LCD_write_byte
+(0462) 	LCD_write_byte(0x20,1);
+    00A05 E021      LDI	R18,1
+    00A06 E030      LDI	R19,0
+    00A07 E200      LDI	R16,0x20
+    00A08 E010      LDI	R17,0
+    00A09 940E 05DE CALL	_LCD_write_byte
+(0463) 	LCD_write_byte(0xf8,1);
+    00A0B E021      LDI	R18,1
+    00A0C E030      LDI	R19,0
+    00A0D EF08      LDI	R16,0xF8
+    00A0E E010      LDI	R17,0
+    00A0F 940C 05DE JMP	_LCD_write_byte
+(0464) }
+(0465) 
+(0466) void plane_right_move()
+(0467) {
+(0468) 	LCD_set_XY(plane_x,plane_y);
+_plane_right_move:
+    00A11 9120 00AC LDS	R18,plane_y
+    00A13 2733      CLR	R19
+    00A14 9100 00AB LDS	R16,plane_x
+    00A16 2711      CLR	R17
+    00A17 940E 059F CALL	_LCD_set_XY
+(0469) 	LCD_write_byte(0x00,1);
+    00A19 E021      LDI	R18,1
+    00A1A E030      LDI	R19,0
+    00A1B 2700      CLR	R16
+    00A1C 2711      CLR	R17
+    00A1D 940E 05DE CALL	_LCD_write_byte
+(0470) 	LCD_write_byte(0x00,1);
+    00A1F E021      LDI	R18,1
+    00A20 E030      LDI	R19,0
+    00A21 2700      CLR	R16
+    00A22 2711      CLR	R17
+    00A23 940E 05DE CALL	_LCD_write_byte
+(0471) 	LCD_write_byte(0x00,1);
+    00A25 E021      LDI	R18,1
+    00A26 E030      LDI	R19,0
+    00A27 2700      CLR	R16
+    00A28 2711      CLR	R17
+    00A29 940E 05DE CALL	_LCD_write_byte
+(0472) 	LCD_write_byte(0x00,1);
+    00A2B E021      LDI	R18,1
+    00A2C E030      LDI	R19,0
+    00A2D 2700      CLR	R16
+    00A2E 2711      CLR	R17
+    00A2F 940E 05DE CALL	_LCD_write_byte
+(0473) 	if(plane_x < 80)
+    00A31 9180 00AB LDS	R24,plane_x
+    00A33 3580      CPI	R24,0x50
+    00A34 F418      BCC	0x0A38
+(0474) 		plane_x++;
+    00A35 5F8F      SUBI	R24,0xFF
+    00A36 9380 00AB STS	plane_x,R24
+(0475) 	LCD_set_XY(plane_x,plane_y);
+    00A38 9120 00AC LDS	R18,plane_y
+    00A3A 2733      CLR	R19
+    00A3B 9100 00AB LDS	R16,plane_x
+    00A3D 2711      CLR	R17
+    00A3E 940E 059F CALL	_LCD_set_XY
+(0476) 	LCD_write_byte(0xf8,1);
+    00A40 E021      LDI	R18,1
+    00A41 E030      LDI	R19,0
+    00A42 EF08      LDI	R16,0xF8
+    00A43 E010      LDI	R17,0
+    00A44 940E 05DE CALL	_LCD_write_byte
+(0477) 	LCD_write_byte(0x20,1);
+    00A46 E021      LDI	R18,1
+    00A47 E030      LDI	R19,0
+    00A48 E200      LDI	R16,0x20
+    00A49 E010      LDI	R17,0
+    00A4A 940E 05DE CALL	_LCD_write_byte
+(0478) 	LCD_write_byte(0x20,1);
+    00A4C E021      LDI	R18,1
+    00A4D E030      LDI	R19,0
+    00A4E E200      LDI	R16,0x20
+    00A4F E010      LDI	R17,0
+    00A50 940E 05DE CALL	_LCD_write_byte
+(0479) 	LCD_write_byte(0xf8,1);
+    00A52 E021      LDI	R18,1
+    00A53 E030      LDI	R19,0
+    00A54 EF08      LDI	R16,0xF8
+    00A55 E010      LDI	R17,0
+    00A56 940C 05DE JMP	_LCD_write_byte
+_plane_is_die:
+    00A58 934A      ST	-Y,R20
+    00A59 935A      ST	-Y,R21
+(0480) }
+(0481) 
+(0482) unsigned char plane_is_die()
+(0483) {
+(0484)     if((plane_x == layout5[0]) || (plane_x == layout5[0] + 1) || (plane_x == layout5[0] + 2) || (plane_x == layout5[0] + 3) || (plane_x == layout5[0] + 4))
+    00A5A 9030 00AB LDS	R3,plane_x
+    00A5C 9050 00A9 LDS	R5,layout5
+    00A5E 1435      CP	R3,R5
+    00A5F F081      BEQ	0x0A70
+    00A60 2D85      MOV	R24,R5
+    00A61 5F8F      SUBI	R24,0xFF
+    00A62 1638      CP	R3,R24
+    00A63 F061      BEQ	0x0A70
+    00A64 2D85      MOV	R24,R5
+    00A65 5F8E      SUBI	R24,0xFE
+    00A66 1638      CP	R3,R24
+    00A67 F041      BEQ	0x0A70
+    00A68 2D85      MOV	R24,R5
+    00A69 5F8D      SUBI	R24,0xFD
+    00A6A 1638      CP	R3,R24
+    00A6B F021      BEQ	0x0A70
+    00A6C 2D85      MOV	R24,R5
+    00A6D 5F8C      SUBI	R24,0xFC
+    00A6E 1638      CP	R3,R24
+    00A6F F411      BNE	0x0A72
+(0485) 	    return 1;
+    00A70 E001      LDI	R16,1
+    00A71 C028      RJMP	0x0A9A
+(0486) 	else if((plane_x + 3 == layout5[0]) || (plane_x + 3 == layout5[0] + 1) || (plane_x + 3 == layout5[0] + 2) ||(plane_x + 3 == layout5[0] + 3) || (plane_x + 4 == layout5[0] + 4))
+    00A72 9100 00AB LDS	R16,plane_x
+    00A74 2F40      MOV	R20,R16
+    00A75 2755      CLR	R21
+    00A76 5F4D      SUBI	R20,0xFD
+    00A77 4F5F      SBCI	R21,0xFF
+    00A78 9120 00A9 LDS	R18,layout5
+    00A7A 2E22      MOV	R2,R18
+    00A7B 2433      CLR	R3
+    00A7C 1542      CP	R20,R2
+    00A7D 0553      CPC	R21,R3
+    00A7E F0C1      BEQ	0x0A97
+    00A7F 2D82      MOV	R24,R2
+    00A80 2799      CLR	R25
+    00A81 9601      ADIW	R24,1
+    00A82 1748      CP	R20,R24
+    00A83 0759      CPC	R21,R25
+    00A84 F091      BEQ	0x0A97
+    00A85 2D82      MOV	R24,R2
+    00A86 2799      CLR	R25
+    00A87 9602      ADIW	R24,2
+    00A88 1748      CP	R20,R24
+    00A89 0759      CPC	R21,R25
+    00A8A F061      BEQ	0x0A97
+    00A8B 2D82      MOV	R24,R2
+    00A8C 2799      CLR	R25
+    00A8D 9603      ADIW	R24,3
+    00A8E 1748      CP	R20,R24
+    00A8F 0759      CPC	R21,R25
+    00A90 F031      BEQ	0x0A97
+    00A91 2D82      MOV	R24,R2
+    00A92 5F8C      SUBI	R24,0xFC
+    00A93 2F90      MOV	R25,R16
+    00A94 5F9C      SUBI	R25,0xFC
+    00A95 1798      CP	R25,R24
+    00A96 F411      BNE	0x0A99
+(0487) 		return 1;
+    00A97 E001      LDI	R16,1
+    00A98 C001      RJMP	0x0A9A
+(0488) 	else
+(0489) 	    return 0;
+    00A99 2700      CLR	R16
+    00A9A 9159      LD	R21,Y+
+    00A9B 9149      LD	R20,Y+
+    00A9C 9508      RET
+_game_over:
+    00A9D 9722      SBIW	R28,2
+(0490) 	
+(0491) }
+(0492) 
+(0493) void game_over()
+(0494) {
+(0495)     LCDFull(0x00);
+    00A9E 2700      CLR	R16
+    00A9F 940E 0588 CALL	_LCDFull
+(0496) 	LCD_write_english_string(0,2," You are die!");
+    00AA1 E583      LDI	R24,0x53
+    00AA2 E091      LDI	R25,1
+    00AA3 8399      STD	Y+1,R25
+    00AA4 8388      ST	Y,R24
+    00AA5 E022      LDI	R18,2
+    00AA6 2700      CLR	R16
+    00AA7 940E 05C9 CALL	_LCD_write_english_string
+(0497) 	LCD_write_english_string(0,3,"   ---  ---");
+    00AA9 E487      LDI	R24,0x47
+    00AAA E091      LDI	R25,1
+    00AAB 8399      STD	Y+1,R25
+    00AAC 8388      ST	Y,R24
+    00AAD E023      LDI	R18,3
+    00AAE 2700      CLR	R16
+    00AAF 940E 05C9 CALL	_LCD_write_english_string
+(0498) 	LCD_write_english_string(0,4,"    |    |");
+    00AB1 E38C      LDI	R24,0x3C
+    00AB2 E091      LDI	R25,1
+    00AB3 8399      STD	Y+1,R25
+    00AB4 8388      ST	Y,R24
+    00AB5 E024      LDI	R18,4
+    00AB6 2700      CLR	R16
+    00AB7 940E 05C9 CALL	_LCD_write_english_string
+(0499) 	LCD_write_english_string(0,5,"    WuWuWu");
+    00AB9 E381      LDI	R24,0x31
+    00ABA E091      LDI	R25,1
+    00ABB 8399      STD	Y+1,R25
+    00ABC 8388      ST	Y,R24
+    00ABD E025      LDI	R18,5
+    00ABE 2700      CLR	R16
+    00ABF 940E 05C9 CALL	_LCD_write_english_string
+(0500) 	delay_ms(15000);
+    00AC1 E908      LDI	R16,0x98
+    00AC2 E31A      LDI	R17,0x3A
+    00AC3 DD66      RCALL	_delay_ms
+(0501) 	LCDFull(0x00);
+    00AC4 2700      CLR	R16
+    00AC5 940E 0588 CALL	_LCDFull
+(0502) 	main_menu();
+    00AC7 D002      RCALL	_main_menu
+    00AC8 9622      ADIW	R28,2
+    00AC9 9508      RET
+_main_menu:
+    00ACA 9722      SBIW	R28,2
+(0503) }
+(0504) 
+(0505) void main_menu()
+(0506) {
+(0507) 	LCDFull(0x00);
+    00ACB 2700      CLR	R16
+    00ACC 940E 0588 CALL	_LCDFull
+(0508) 	LCD_DispCHstr(12,0,"一、计时器");
+    00ACE E286      LDI	R24,0x26
+    00ACF E091      LDI	R25,1
+    00AD0 8399      STD	Y+1,R25
+    00AD1 8388      ST	Y,R24
+    00AD2 2722      CLR	R18
+    00AD3 E00C      LDI	R16,0xC
+    00AD4 940E 060D CALL	_LCD_DispCHstr
+(0509) 	LCD_DispCHstr(12,2,"二、音乐盒");
+    00AD6 E18B      LDI	R24,0x1B
+    00AD7 E091      LDI	R25,1
+    00AD8 8399      STD	Y+1,R25
+    00AD9 8388      ST	Y,R24
+    00ADA E022      LDI	R18,2
+    00ADB E00C      LDI	R16,0xC
+    00ADC 940E 060D CALL	_LCD_DispCHstr
+(0510) 	LCD_DispCHstr(12,4,"三、游戏");
+    00ADE E182      LDI	R24,0x12
+    00ADF E091      LDI	R25,1
+    00AE0 8399      STD	Y+1,R25
+    00AE1 8388      ST	Y,R24
+    00AE2 E024      LDI	R18,4
+    00AE3 E00C      LDI	R16,0xC
+    00AE4 940E 060D CALL	_LCD_DispCHstr
+(0511) 	LCD_DispCHstr(0,0,"》");
+    00AE6 E08F      LDI	R24,0xF
+    00AE7 E091      LDI	R25,1
+    00AE8 8399      STD	Y+1,R25
+    00AE9 8388      ST	Y,R24
+    00AEA 2722      CLR	R18
+    00AEB 2700      CLR	R16
+    00AEC 940E 060D CALL	_LCD_DispCHstr
+    00AEE 9622      ADIW	R28,2
+    00AEF 9508      RET
+_sel1_menu:
+    00AF0 9722      SBIW	R28,2
+(0512) }
+(0513) 
+(0514) void sel1_menu()
+(0515) {
+(0516) 	LCDFull(0x00);
+    00AF1 2700      CLR	R16
+    00AF2 940E 0588 CALL	_LCDFull
+(0517) 	LCD_DispCHstr(24,2,"计时器");
+    00AF4 E088      LDI	R24,0x8
+    00AF5 E091      LDI	R25,1
+    00AF6 8399      STD	Y+1,R25
+    00AF7 8388      ST	Y,R24
+    00AF8 E022      LDI	R18,2
+    00AF9 E108      LDI	R16,0x18
+    00AFA 940E 060D CALL	_LCD_DispCHstr
+    00AFC 9622      ADIW	R28,2
+    00AFD 9508      RET
+_sel1_menu_work:
+  menu1_flag           --> R20
+    00AFE 940E 1221 CALL	push_xgsetF00C
+(0518) }
+(0519) 
+(0520) void sel1_menu_work()
+(0521) {
+(0522) 	unsigned char menu1_flag = 1;
+    00B00 E041      LDI	R20,1
+    00B01 C0C9      RJMP	0x0BCB
+(0523) 	while(menu1_flag)
+(0524) 	{
+(0525) 		if(time_1s_ok)
+    00B02 9020 009C LDS	R2,time_1s_ok
+    00B04 2022      TST	R2
+    00B05 F409      BNE	0x0B07
+    00B06 C045      RJMP	0x0B4C
+(0526) 		{
+(0527) 			flash_count++;
+    00B07 9180 009E LDS	R24,flash_count
+    00B09 5F8F      SUBI	R24,0xFF
+    00B0A 9380 009E STS	flash_count,R24
+(0528) 			if(flash_count >= 3)
+    00B0C 3083      CPI	R24,3
+    00B0D F028      BCS	0x0B13
+(0529) 			{
+(0530) 				isflash = noflash;
+    00B0E 2422      CLR	R2
+    00B0F 9220 009D STS	isflash,R2
+(0531) 				flash_count = 0;
+    00B11 9220 009E STS	flash_count,R2
+(0532) 			}
+(0533) 			time_1s_ok = 0;
+    00B13 2422      CLR	R2
+    00B14 9220 009C STS	time_1s_ok,R2
+(0534) 			if(isflash == noflash)
+    00B16 9020 009D LDS	R2,isflash
+    00B18 2022      TST	R2
+    00B19 F591      BNE	0x0B4C
+(0535) 			{
+(0536) 				if(++disp_buff_sec_number >= 60)
+    00B1A 9180 0090 LDS	R24,disp_buff_sec_number
+    00B1C 5F8F      SUBI	R24,0xFF
+    00B1D 2E28      MOV	R2,R24
+    00B1E 9220 0090 STS	disp_buff_sec_number,R2
+    00B20 338C      CPI	R24,0x3C
+    00B21 F070      BCS	0x0B30
+(0537) 				{
+(0538) 					disp_buff_sec_number = 0;
+    00B22 2422      CLR	R2
+    00B23 9220 0090 STS	disp_buff_sec_number,R2
+(0539) 					if(++disp_buff_min_number >= 60)
+    00B25 9180 008F LDS	R24,disp_buff_min_number
+    00B27 5F8F      SUBI	R24,0xFF
+    00B28 2E28      MOV	R2,R24
+    00B29 9220 008F STS	disp_buff_min_number,R2
+    00B2B 338C      CPI	R24,0x3C
+    00B2C F018      BCS	0x0B30
+(0540) 					{
+(0541) 						disp_buff_min_number = 0;
+    00B2D 2422      CLR	R2
+    00B2E 9220 008F STS	disp_buff_min_number,R2
+(0542) 					}
+(0543) 				}
+(0544) 				disp_buff[0] = disp_buff_min_number/10;
+    00B30 E01A      LDI	R17,0xA
+    00B31 9100 008F LDS	R16,disp_buff_min_number
+    00B33 940E 11D1 CALL	div8u
+    00B35 9300 0091 STS	disp_buff,R16
+(0545) 				disp_buff[1] = disp_buff_min_number%10;
+    00B37 E01A      LDI	R17,0xA
+    00B38 9100 008F LDS	R16,disp_buff_min_number
+    00B3A 940E 11CF CALL	mod8u
+    00B3C 9300 0092 STS	disp_buff+1,R16
+(0546) 				disp_buff[2] = disp_buff_sec_number/10;
+    00B3E E01A      LDI	R17,0xA
+    00B3F 9100 0090 LDS	R16,disp_buff_sec_number
+    00B41 940E 11D1 CALL	div8u
+    00B43 9300 0093 STS	disp_buff+2,R16
+(0547) 				disp_buff[3] = disp_buff_sec_number%10;
+    00B45 E01A      LDI	R17,0xA
+    00B46 9100 0090 LDS	R16,disp_buff_sec_number
+    00B48 940E 11CF CALL	mod8u
+    00B4A 9300 0094 STS	disp_buff+3,R16
+(0548) 			}
+(0549) 		}
+(0550) 		
+(0551) 		
+(0552) 		if(time_10ms_ok)
+    00B4C 9020 0097 LDS	R2,time_10ms_ok
+    00B4E 2022      TST	R2
+    00B4F F409      BNE	0x0B51
+    00B50 C07A      RJMP	0x0BCB
+(0553) 		{
+(0554) 			time_10ms_ok = 0;
+    00B51 2422      CLR	R2
+    00B52 9220 0097 STS	time_10ms_ok,R2
+(0555) 			switch(read_key())
+    00B54 DCE4      RCALL	_read_key
+    00B55 2EA0      MOV	R10,R16
+    00B56 2D6A      MOV	R22,R10
+    00B57 2777      CLR	R23
+    00B58 3061      CPI	R22,1
+    00B59 E0E0      LDI	R30,0
+    00B5A 077E      CPC	R23,R30
+    00B5B F051      BEQ	0x0B66
+    00B5C 3062      CPI	R22,2
+    00B5D E0E0      LDI	R30,0
+    00B5E 077E      CPC	R23,R30
+    00B5F F0E9      BEQ	0x0B7D
+    00B60 3063      CPI	R22,3
+    00B61 E0E0      LDI	R30,0
+    00B62 077E      CPC	R23,R30
+    00B63 F409      BNE	0x0B65
+    00B64 C054      RJMP	0x0BB9
+    00B65 C065      RJMP	0x0BCB
+(0556) 			{
+(0557) 				case SW8:
+(0558) 					flash_count = 0;
+    00B66 2422      CLR	R2
+    00B67 9220 009E STS	flash_count,R2
+(0559) 					if(isflash == noflash)
+    00B69 9020 009D LDS	R2,isflash
+    00B6B 2022      TST	R2
+    00B6C F421      BNE	0x0B71
+(0560) 						isflash = secflash;
+    00B6D E081      LDI	R24,1
+    00B6E 9380 009D STS	isflash,R24
+    00B70 C05A      RJMP	0x0BCB
+(0561) 					else if(isflash == secflash)
+    00B71 9180 009D LDS	R24,isflash
+    00B73 3081      CPI	R24,1
+    00B74 F421      BNE	0x0B79
+(0562) 						isflash = minflash;
+    00B75 E082      LDI	R24,2
+    00B76 9380 009D STS	isflash,R24
+    00B78 C052      RJMP	0x0BCB
+(0563) 					else 
+(0564) 						isflash = secflash;
+    00B79 E081      LDI	R24,1
+    00B7A 9380 009D STS	isflash,R24
+(0565) 					break;
+    00B7C C04E      RJMP	0x0BCB
+(0566) 				case key1_short:
+(0567) 					flash_count = 0;
+    00B7D 2422      CLR	R2
+    00B7E 9220 009E STS	flash_count,R2
+(0568) 					if(isflash == secflash)
+    00B80 9180 009D LDS	R24,isflash
+    00B82 3081      CPI	R24,1
+    00B83 F451      BNE	0x0B8E
+(0569) 					{
+(0570) 						if(++disp_buff_sec_number >= 60)
+    00B84 9160 0090 LDS	R22,disp_buff_sec_number
+    00B86 5F6F      SUBI	R22,0xFF
+    00B87 9360 0090 STS	disp_buff_sec_number,R22
+    00B89 336C      CPI	R22,0x3C
+    00B8A F088      BCS	0x0B9C
+(0571) 							disp_buff_sec_number = 0;
+    00B8B 9220 0090 STS	disp_buff_sec_number,R2
+(0572) 					}
+    00B8D C00E      RJMP	0x0B9C
+(0573) 					else if(isflash == minflash)
+    00B8E 9180 009D LDS	R24,isflash
+    00B90 3082      CPI	R24,2
+    00B91 F451      BNE	0x0B9C
+(0574) 					{
+(0575) 						if(++disp_buff_min_number >= 60)
+    00B92 9160 008F LDS	R22,disp_buff_min_number
+    00B94 5F6F      SUBI	R22,0xFF
+    00B95 9360 008F STS	disp_buff_min_number,R22
+    00B97 336C      CPI	R22,0x3C
+    00B98 F018      BCS	0x0B9C
+(0576) 							disp_buff_min_number = 0;
+    00B99 2422      CLR	R2
+    00B9A 9220 008F STS	disp_buff_min_number,R2
+(0577) 					}
+(0578) 					disp_buff[0] = disp_buff_min_number/10;
+    00B9C E01A      LDI	R17,0xA
+    00B9D 9100 008F LDS	R16,disp_buff_min_number
+    00B9F 940E 11D1 CALL	div8u
+    00BA1 9300 0091 STS	disp_buff,R16
+(0579) 					disp_buff[1] = disp_buff_min_number%10;
+    00BA3 E01A      LDI	R17,0xA
+    00BA4 9100 008F LDS	R16,disp_buff_min_number
+    00BA6 940E 11CF CALL	mod8u
+    00BA8 9300 0092 STS	disp_buff+1,R16
+(0580) 					disp_buff[2] = disp_buff_sec_number/10;
+    00BAA E01A      LDI	R17,0xA
+    00BAB 9100 0090 LDS	R16,disp_buff_sec_number
+    00BAD 940E 11D1 CALL	div8u
+    00BAF 9300 0093 STS	disp_buff+2,R16
+(0581) 					disp_buff[3] = disp_buff_sec_number%10;
+    00BB1 E01A      LDI	R17,0xA
+    00BB2 9100 0090 LDS	R16,disp_buff_sec_number
+    00BB4 940E 11CF CALL	mod8u
+    00BB6 9300 0094 STS	disp_buff+3,R16
+(0582) 					break;
+    00BB8 C012      RJMP	0x0BCB
+(0583) 				case key1_long:
+(0584) 					menu1_flag = 0;
+    00BB9 2744      CLR	R20
+(0585) 					disp_buff_min_number = 0;
+    00BBA 2422      CLR	R2
+    00BBB 9220 008F STS	disp_buff_min_number,R2
+(0586) 					disp_buff_sec_number = 0;
+    00BBD 9220 0090 STS	disp_buff_sec_number,R2
+(0587) 					disp_buff[0] = 0;
+    00BBF 9220 0091 STS	disp_buff,R2
+(0588) 					disp_buff[1] = 0;
+    00BC1 9220 0092 STS	disp_buff+1,R2
+(0589) 					disp_buff[2] = 0;
+    00BC3 9220 0093 STS	disp_buff+2,R2
+(0590) 					disp_buff[3] = 0;
+    00BC5 9220 0094 STS	disp_buff+3,R2
+(0591) 					LCDFull(0x00);
+    00BC7 2700      CLR	R16
+    00BC8 940E 0588 CALL	_LCDFull
+(0592) 					main_menu();
+    00BCA DEFF      RCALL	_main_menu
+    00BCB 2344      TST	R20
+    00BCC F009      BEQ	0x0BCE
+    00BCD CF34      RJMP	0x0B02
+    00BCE 940C 1228 JMP	pop_xgsetF00C
+_sel2_menu:
+    00BD0 9722      SBIW	R28,2
+(0593) 					break;
+(0594) 			}
+(0595) 		}
+(0596) 		
+(0597) 		
+(0598) 	}
+(0599) }
+(0600) 
+(0601) void sel2_menu()
+(0602) {
+(0603) 	LCDFull(0x00);
+    00BD1 2700      CLR	R16
+    00BD2 940E 0588 CALL	_LCDFull
+(0604) 	LCD_DispCHstr(12,0,"正在播放：");
+    00BD4 EF8D      LDI	R24,0xFD
+    00BD5 E090      LDI	R25,0
+    00BD6 8399      STD	Y+1,R25
+    00BD7 8388      ST	Y,R24
+    00BD8 2722      CLR	R18
+    00BD9 E00C      LDI	R16,0xC
+    00BDA 940E 060D CALL	_LCD_DispCHstr
+(0605) 	LCD_DispCHstr(24,2,"星之所在");
+    00BDC EF84      LDI	R24,0xF4
+    00BDD E090      LDI	R25,0
+    00BDE 8399      STD	Y+1,R25
+    00BDF 8388      ST	Y,R24
+    00BE0 E022      LDI	R18,2
+    00BE1 E108      LDI	R16,0x18
+    00BE2 940E 060D CALL	_LCD_DispCHstr
+    00BE4 9622      ADIW	R28,2
+    00BE5 9508      RET
+_sel2_menu_work:
+  menu2_flag           --> R20
+    00BE6 940E 1217 CALL	push_xgsetF000
+    00BE8 9722      SBIW	R28,2
+(0606) }
+(0607) 
+(0608) void sel2_menu_work()
+(0609) {
+(0610) 	unsigned char menu2_flag = 1;
+    00BE9 E041      LDI	R20,1
+    00BEA C072      RJMP	0x0C5D
+(0611) 	while(menu2_flag)
+(0612) 	{
+(0613) 		if(time_10ms_ok)
+    00BEB 9020 0097 LDS	R2,time_10ms_ok
+    00BED 2022      TST	R2
+    00BEE F409      BNE	0x0BF0
+    00BEF C06D      RJMP	0x0C5D
+(0614) 		{
+(0615) 			time_10ms_ok = 0;
+    00BF0 2422      CLR	R2
+    00BF1 9220 0097 STS	time_10ms_ok,R2
+(0616) 			switch(read_key())
+    00BF3 DC45      RCALL	_read_key
+    00BF4 2F60      MOV	R22,R16
+    00BF5 2777      CLR	R23
+    00BF6 3061      CPI	R22,1
+    00BF7 E0E0      LDI	R30,0
+    00BF8 077E      CPC	R23,R30
+    00BF9 F051      BEQ	0x0C04
+    00BFA 3062      CPI	R22,2
+    00BFB E0E0      LDI	R30,0
+    00BFC 077E      CPC	R23,R30
+    00BFD F081      BEQ	0x0C0E
+    00BFE 3063      CPI	R22,3
+    00BFF E0E0      LDI	R30,0
+    00C00 077E      CPC	R23,R30
+    00C01 F409      BNE	0x0C03
+    00C02 C046      RJMP	0x0C49
+    00C03 C059      RJMP	0x0C5D
+(0617) 			{
+(0618) 				case SW8:
+(0619) 				if(TCCR1B == 0x08)
+    00C04 B58E      IN	R24,0x2E
+    00C05 3088      CPI	R24,0x8
+    00C06 F419      BNE	0x0C0A
+(0620) 					TCCR1B = 0x0A;
+    00C07 E08A      LDI	R24,0xA
+    00C08 BD8E      OUT	0x2E,R24
+    00C09 C053      RJMP	0x0C5D
+(0621) 				else
+(0622) 				{
+(0623) 					TCCR1B = 0x08;
+    00C0A E088      LDI	R24,0x8
+    00C0B BD8E      OUT	0x2E,R24
+(0624) 					PORTA |= (1 << 3);
+    00C0C 9ADB      SBI	0x1B,3
+(0625) 				}
+(0626) 				break;
+    00C0D C04F      RJMP	0x0C5D
+(0627) 				
+(0628) 				case key1_short:
+(0629) 				if(music_sel == 1)
+    00C0E 9180 0080 LDS	R24,music_sel
+    00C10 3081      CPI	R24,1
+    00C11 F4B9      BNE	0x0C29
+(0630) 				{
+(0631) 					music_sel = 2;
+    00C12 E082      LDI	R24,2
+    00C13 9380 0080 STS	music_sel,R24
+(0632) 					LCDFull(0x00);
+    00C15 2700      CLR	R16
+    00C16 940E 0588 CALL	_LCDFull
+(0633) 					LCD_DispCHstr(12,0,"正在播放：");
+    00C18 EF8D      LDI	R24,0xFD
+    00C19 E090      LDI	R25,0
+    00C1A 8399      STD	Y+1,R25
+    00C1B 8388      ST	Y,R24
+    00C1C 2722      CLR	R18
+    00C1D E00C      LDI	R16,0xC
+    00C1E 940E 060D CALL	_LCD_DispCHstr
+(0634) 					LCD_DispCHstr(24,2,"星之所在");
+    00C20 EF84      LDI	R24,0xF4
+    00C21 E090      LDI	R25,0
+    00C22 8399      STD	Y+1,R25
+    00C23 8388      ST	Y,R24
+    00C24 E022      LDI	R18,2
+    00C25 E108      LDI	R16,0x18
+    00C26 940E 060D CALL	_LCD_DispCHstr
+(0635) 				}
+    00C28 C016      RJMP	0x0C3F
+(0636) 				else
+(0637) 				{
+(0638) 					music_sel = 1;
+    00C29 E081      LDI	R24,1
+    00C2A 9380 0080 STS	music_sel,R24
+(0639) 					LCDFull(0x00);
+    00C2C 2700      CLR	R16
+    00C2D 940E 0588 CALL	_LCDFull
+(0640) 					LCD_DispCHstr(12,0,"正在播放：");
+    00C2F EF8D      LDI	R24,0xFD
+    00C30 E090      LDI	R25,0
+    00C31 8399      STD	Y+1,R25
+    00C32 8388      ST	Y,R24
+    00C33 2722      CLR	R18
+    00C34 E00C      LDI	R16,0xC
+    00C35 940E 060D CALL	_LCD_DispCHstr
+(0641) 					LCD_DispCHstr(12,2,"梦中的婚礼");
+    00C37 EE89      LDI	R24,0xE9
+    00C38 E090      LDI	R25,0
+    00C39 8399      STD	Y+1,R25
+    00C3A 8388      ST	Y,R24
+    00C3B E022      LDI	R18,2
+    00C3C E00C      LDI	R16,0xC
+    00C3D 940E 060D CALL	_LCD_DispCHstr
+(0642) 				}
+(0643) 				note_n = 0;
+    00C3F 2422      CLR	R2
+    00C40 9220 007B STS	note_n,R2
+(0644) 				int_n = 1;
+    00C42 E081      LDI	R24,1
+    00C43 E090      LDI	R25,0
+    00C44 9390 007D STS	int_n+1,R25
+    00C46 9380 007C STS	int_n,R24
+(0645) 				break;
+    00C48 C014      RJMP	0x0C5D
+(0646) 				
+(0647) 				case key1_long:
+(0648) 				menu2_flag = 0;
+    00C49 2744      CLR	R20
+(0649) 				TCCR1B = 0x08;
+    00C4A E088      LDI	R24,0x8
+    00C4B BD8E      OUT	0x2E,R24
+(0650) 				PORTA |= (1 << 3);
+    00C4C 9ADB      SBI	0x1B,3
+(0651) 				music_sel = 2;
+    00C4D E082      LDI	R24,2
+    00C4E 9380 0080 STS	music_sel,R24
+(0652) 				note_n = 0;
+    00C50 2422      CLR	R2
+    00C51 9220 007B STS	note_n,R2
+(0653) 				int_n = 1;
+    00C53 E081      LDI	R24,1
+    00C54 E090      LDI	R25,0
+    00C55 9390 007D STS	int_n+1,R25
+    00C57 9380 007C STS	int_n,R24
+(0654) 				LCDFull(0x00);
+    00C59 2700      CLR	R16
+    00C5A 940E 0588 CALL	_LCDFull
+(0655) 				main_menu();
+    00C5C DE6D      RCALL	_main_menu
+    00C5D 2344      TST	R20
+    00C5E F009      BEQ	0x0C60
+    00C5F CF8B      RJMP	0x0BEB
+    00C60 9622      ADIW	R28,2
+    00C61 940C 121C JMP	pop_xgsetF000
+(0656) 				break;
+(0657) 			}
+(0658) 		}
+(0659) 	}
+(0660) }
+(0661) 
+(0662) unsigned char is_has_bullet()
+(0663) {
+(0664) 	if((plane_bullet_y == 0) || (plane_bullet_x == 0))
+_is_has_bullet:
+    00C63 9020 00AE LDS	R2,plane_bullet_y
+    00C65 2022      TST	R2
+    00C66 F021      BEQ	0x0C6B
+    00C67 9020 00AD LDS	R2,plane_bullet_x
+    00C69 2022      TST	R2
+    00C6A F411      BNE	0x0C6D
+(0665) 		return 0;
+    00C6B 2700      CLR	R16
+    00C6C C001      RJMP	0x0C6E
+(0666) 	else
+(0667) 		return 1;
+    00C6D E001      LDI	R16,1
+    00C6E 9508      RET
+(0668) }
+(0669) 
+(0670) void plane_bullet_move()
+(0671) {
+(0672) 	if((plane_bullet_x == 0) || (plane_bullet_y == 0))
+_plane_bullet_move:
+    00C6F 9020 00AD LDS	R2,plane_bullet_x
+    00C71 2022      TST	R2
+    00C72 F021      BEQ	0x0C77
+    00C73 9020 00AE LDS	R2,plane_bullet_y
+    00C75 2022      TST	R2
+    00C76 F4A1      BNE	0x0C8B
+(0673) 	{
+(0674) 		LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00C77 9120 00AE LDS	R18,plane_bullet_y
+    00C79 2733      CLR	R19
+    00C7A 9100 00AD LDS	R16,plane_bullet_x
+    00C7C 2711      CLR	R17
+    00C7D 940E 059F CALL	_LCD_set_XY
+(0675) 		LCD_write_byte(0x00,1);
+    00C7F E021      LDI	R18,1
+    00C80 E030      LDI	R19,0
+    00C81 2700      CLR	R16
+    00C82 2711      CLR	R17
+    00C83 940E 05DE CALL	_LCD_write_byte
+(0676) 		plane_bullet_x = 0;
+    00C85 2422      CLR	R2
+    00C86 9220 00AD STS	plane_bullet_x,R2
+(0677) 		plane_bullet_y = 0;
+    00C88 9220 00AE STS	plane_bullet_y,R2
+(0678) 		return;
+    00C8A C025      RJMP	0x0CB0
+(0679) 	}
+(0680) 	LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00C8B 9120 00AE LDS	R18,plane_bullet_y
+    00C8D 2733      CLR	R19
+    00C8E 9100 00AD LDS	R16,plane_bullet_x
+    00C90 2711      CLR	R17
+    00C91 940E 059F CALL	_LCD_set_XY
+(0681) 	LCD_write_byte(0x00,1);
+    00C93 E021      LDI	R18,1
+    00C94 E030      LDI	R19,0
+    00C95 2700      CLR	R16
+    00C96 2711      CLR	R17
+    00C97 940E 05DE CALL	_LCD_write_byte
+(0682) 	if(plane_bullet_y > 0)
+    00C99 E080      LDI	R24,0
+    00C9A 9020 00AE LDS	R2,plane_bullet_y
+    00C9C 1582      CP	R24,R2
+    00C9D F420      BCC	0x0CA2
+(0683) 		plane_bullet_y = plane_bullet_y - 1;
+    00C9E 2D82      MOV	R24,R2
+    00C9F 5081      SUBI	R24,1
+    00CA0 9380 00AE STS	plane_bullet_y,R24
+(0684) 	LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00CA2 9120 00AE LDS	R18,plane_bullet_y
+    00CA4 2733      CLR	R19
+    00CA5 9100 00AD LDS	R16,plane_bullet_x
+    00CA7 2711      CLR	R17
+    00CA8 940E 059F CALL	_LCD_set_XY
+(0685) 	LCD_write_byte(0x08,1);
+    00CAA E021      LDI	R18,1
+    00CAB E030      LDI	R19,0
+    00CAC E008      LDI	R16,0x8
+    00CAD E010      LDI	R17,0
+    00CAE 940E 05DE CALL	_LCD_write_byte
+    00CB0 9508      RET
+_plane_bullet_want_die:
+    00CB1 940E 120D CALL	push_xgset300C
+(0686) }
+(0687) 
+(0688) void plane_bullet_want_die()
+(0689) {
+(0690) 	if(plane_bullet_y == 0)
+    00CB3 9020 00AE LDS	R2,plane_bullet_y
+    00CB5 2022      TST	R2
+    00CB6 F009      BEQ	0x0CB8
+    00CB7 C0A7      RJMP	0x0D5F
+(0691) 	{
+(0692) 		if(plane_bullet_x == layout0[0] || (plane_bullet_x == layout0[0] + 1) || (plane_bullet_x == layout0[0] + 2) || (plane_bullet_x == layout0[0] + 3) || (plane_bullet_x == layout0[0] + 4))
+    00CB8 9030 00AD LDS	R3,plane_bullet_x
+    00CBA 9050 009F LDS	R5,layout0
+    00CBC 1435      CP	R3,R5
+    00CBD F081      BEQ	0x0CCE
+    00CBE 2D85      MOV	R24,R5
+    00CBF 5F8F      SUBI	R24,0xFF
+    00CC0 1638      CP	R3,R24
+    00CC1 F061      BEQ	0x0CCE
+    00CC2 2D85      MOV	R24,R5
+    00CC3 5F8E      SUBI	R24,0xFE
+    00CC4 1638      CP	R3,R24
+    00CC5 F041      BEQ	0x0CCE
+    00CC6 2D85      MOV	R24,R5
+    00CC7 5F8D      SUBI	R24,0xFD
+    00CC8 1638      CP	R3,R24
+    00CC9 F021      BEQ	0x0CCE
+    00CCA 2D85      MOV	R24,R5
+    00CCB 5F8C      SUBI	R24,0xFC
+    00CCC 1638      CP	R3,R24
+    00CCD F571      BNE	0x0CFC
+(0693) 		{
+(0694) 			LCD_set_XY(plane_bullet_x,layout0[0]);
+    00CCE 9120 009F LDS	R18,layout0
+    00CD0 2733      CLR	R19
+    00CD1 9100 00AD LDS	R16,plane_bullet_x
+    00CD3 2711      CLR	R17
+    00CD4 940E 059F CALL	_LCD_set_XY
+(0695) 			LCD_write_byte(0x00,1);
+    00CD6 E021      LDI	R18,1
+    00CD7 E030      LDI	R19,0
+    00CD8 2700      CLR	R16
+    00CD9 2711      CLR	R17
+    00CDA 940E 05DE CALL	_LCD_write_byte
+(0696) 			LCD_write_byte(0x00,1);
+    00CDC E021      LDI	R18,1
+    00CDD E030      LDI	R19,0
+    00CDE 2700      CLR	R16
+    00CDF 2711      CLR	R17
+    00CE0 940E 05DE CALL	_LCD_write_byte
+(0697) 			LCD_write_byte(0x00,1);
+    00CE2 E021      LDI	R18,1
+    00CE3 E030      LDI	R19,0
+    00CE4 2700      CLR	R16
+    00CE5 2711      CLR	R17
+    00CE6 940E 05DE CALL	_LCD_write_byte
+(0698) 			LCD_write_byte(0x00,1);
+    00CE8 E021      LDI	R18,1
+    00CE9 E030      LDI	R19,0
+    00CEA 2700      CLR	R16
+    00CEB 2711      CLR	R17
+    00CEC 940E 05DE CALL	_LCD_write_byte
+(0699) 			LCD_write_byte(0x00,1);
+    00CEE E021      LDI	R18,1
+    00CEF E030      LDI	R19,0
+    00CF0 2700      CLR	R16
+    00CF1 2711      CLR	R17
+    00CF2 940E 05DE CALL	_LCD_write_byte
+(0700) 			plane_bullet_x = 0;
+    00CF4 2422      CLR	R2
+    00CF5 9220 00AD STS	plane_bullet_x,R2
+(0701) 			plane_bullet_y = 0;
+    00CF7 9220 00AE STS	plane_bullet_y,R2
+(0702) 			layout0[0] = 0;
+    00CF9 9220 009F STS	layout0,R2
+(0703) 		}
+    00CFB C311      RJMP	0x100D
+(0704) 		else if(plane_bullet_x + 1 == layout0[0] || (plane_bullet_x + 1 == layout0[0] + 1) || (plane_bullet_x + 1 == layout0[0] + 2) || (plane_bullet_x + 1 == layout0[0] + 3) || (plane_bullet_x + 1 == layout0[0] + 4))
+    00CFC 9140 00AD LDS	R20,plane_bullet_x
+    00CFE 2755      CLR	R21
+    00CFF 5F4F      SUBI	R20,0xFF
+    00D00 4F5F      SBCI	R21,0xFF
+    00D01 90A0 009F LDS	R10,layout0
+    00D03 2C2A      MOV	R2,R10
+    00D04 2433      CLR	R3
+    00D05 1542      CP	R20,R2
+    00D06 0553      CPC	R21,R3
+    00D07 F0C9      BEQ	0x0D21
+    00D08 2D82      MOV	R24,R2
+    00D09 2799      CLR	R25
+    00D0A 9601      ADIW	R24,1
+    00D0B 1748      CP	R20,R24
+    00D0C 0759      CPC	R21,R25
+    00D0D F099      BEQ	0x0D21
+    00D0E 2D82      MOV	R24,R2
+    00D0F 2799      CLR	R25
+    00D10 9602      ADIW	R24,2
+    00D11 1748      CP	R20,R24
+    00D12 0759      CPC	R21,R25
+    00D13 F069      BEQ	0x0D21
+    00D14 2D82      MOV	R24,R2
+    00D15 2799      CLR	R25
+    00D16 9603      ADIW	R24,3
+    00D17 1748      CP	R20,R24
+    00D18 0759      CPC	R21,R25
+    00D19 F039      BEQ	0x0D21
+    00D1A 2D82      MOV	R24,R2
+    00D1B 2799      CLR	R25
+    00D1C 9604      ADIW	R24,4
+    00D1D 1748      CP	R20,R24
+    00D1E 0759      CPC	R21,R25
+    00D1F F009      BEQ	0x0D21
+    00D20 C2EC      RJMP	0x100D
+(0705) 		{
+(0706) 			LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00D21 9120 00AE LDS	R18,plane_bullet_y
+    00D23 2733      CLR	R19
+    00D24 9100 00AD LDS	R16,plane_bullet_x
+    00D26 2711      CLR	R17
+    00D27 940E 059F CALL	_LCD_set_XY
+(0707) 			LCD_write_byte(0x00,1);
+    00D29 E021      LDI	R18,1
+    00D2A E030      LDI	R19,0
+    00D2B 2700      CLR	R16
+    00D2C 2711      CLR	R17
+    00D2D 940E 05DE CALL	_LCD_write_byte
+(0708) 			LCD_set_XY(plane_bullet_x + 1,layout0[0]);
+    00D2F 9120 009F LDS	R18,layout0
+    00D31 2733      CLR	R19
+    00D32 9100 00AD LDS	R16,plane_bullet_x
+    00D34 2711      CLR	R17
+    00D35 5F0F      SUBI	R16,0xFF
+    00D36 4F1F      SBCI	R17,0xFF
+    00D37 940E 059F CALL	_LCD_set_XY
+(0709) 			LCD_write_byte(0x00,1);
+    00D39 E021      LDI	R18,1
+    00D3A E030      LDI	R19,0
+    00D3B 2700      CLR	R16
+    00D3C 2711      CLR	R17
+    00D3D 940E 05DE CALL	_LCD_write_byte
+(0710) 			LCD_write_byte(0x00,1);
+    00D3F E021      LDI	R18,1
+    00D40 E030      LDI	R19,0
+    00D41 2700      CLR	R16
+    00D42 2711      CLR	R17
+    00D43 940E 05DE CALL	_LCD_write_byte
+(0711) 			LCD_write_byte(0x00,1);
+    00D45 E021      LDI	R18,1
+    00D46 E030      LDI	R19,0
+    00D47 2700      CLR	R16
+    00D48 2711      CLR	R17
+    00D49 940E 05DE CALL	_LCD_write_byte
+(0712) 			LCD_write_byte(0x00,1);
+    00D4B E021      LDI	R18,1
+    00D4C E030      LDI	R19,0
+    00D4D 2700      CLR	R16
+    00D4E 2711      CLR	R17
+    00D4F 940E 05DE CALL	_LCD_write_byte
+(0713) 			LCD_write_byte(0x00,1);
+    00D51 E021      LDI	R18,1
+    00D52 E030      LDI	R19,0
+    00D53 2700      CLR	R16
+    00D54 2711      CLR	R17
+    00D55 940E 05DE CALL	_LCD_write_byte
+(0714) 			plane_bullet_x = 0;
+    00D57 2422      CLR	R2
+    00D58 9220 00AD STS	plane_bullet_x,R2
+(0715) 			plane_bullet_y = 0;
+    00D5A 9220 00AE STS	plane_bullet_y,R2
+(0716) 			layout0[0] = 0;
+    00D5C 9220 009F STS	layout0,R2
+(0717) 		}
+(0718) 	}
+    00D5E C2AE      RJMP	0x100D
+(0719) 	
+(0720) 	else if(plane_bullet_y == 1)
+    00D5F 9180 00AE LDS	R24,plane_bullet_y
+    00D61 3081      CPI	R24,1
+    00D62 F009      BEQ	0x0D64
+    00D63 C0A7      RJMP	0x0E0B
+(0721) 	{
+(0722) 		if(plane_bullet_x == layout1[0] || (plane_bullet_x == layout1[0] + 1) || (plane_bullet_x == layout1[0] + 2) || (plane_bullet_x == layout1[0] + 3) || (plane_bullet_x == layout1[0] + 4))
+    00D64 90A0 00AD LDS	R10,plane_bullet_x
+    00D66 9140 00A1 LDS	R20,layout1
+    00D68 16A4      CP	R10,R20
+    00D69 F081      BEQ	0x0D7A
+    00D6A 2F84      MOV	R24,R20
+    00D6B 5F8F      SUBI	R24,0xFF
+    00D6C 16A8      CP	R10,R24
+    00D6D F061      BEQ	0x0D7A
+    00D6E 2F84      MOV	R24,R20
+    00D6F 5F8E      SUBI	R24,0xFE
+    00D70 16A8      CP	R10,R24
+    00D71 F041      BEQ	0x0D7A
+    00D72 2F84      MOV	R24,R20
+    00D73 5F8D      SUBI	R24,0xFD
+    00D74 16A8      CP	R10,R24
+    00D75 F021      BEQ	0x0D7A
+    00D76 2F84      MOV	R24,R20
+    00D77 5F8C      SUBI	R24,0xFC
+    00D78 16A8      CP	R10,R24
+    00D79 F571      BNE	0x0DA8
+(0723) 		{
+(0724) 			LCD_set_XY(plane_bullet_x,layout1[0]);
+    00D7A 9120 00A1 LDS	R18,layout1
+    00D7C 2733      CLR	R19
+    00D7D 9100 00AD LDS	R16,plane_bullet_x
+    00D7F 2711      CLR	R17
+    00D80 940E 059F CALL	_LCD_set_XY
+(0725) 			LCD_write_byte(0x00,1);
+    00D82 E021      LDI	R18,1
+    00D83 E030      LDI	R19,0
+    00D84 2700      CLR	R16
+    00D85 2711      CLR	R17
+    00D86 940E 05DE CALL	_LCD_write_byte
+(0726) 			LCD_write_byte(0x00,1);
+    00D88 E021      LDI	R18,1
+    00D89 E030      LDI	R19,0
+    00D8A 2700      CLR	R16
+    00D8B 2711      CLR	R17
+    00D8C 940E 05DE CALL	_LCD_write_byte
+(0727) 			LCD_write_byte(0x00,1);
+    00D8E E021      LDI	R18,1
+    00D8F E030      LDI	R19,0
+    00D90 2700      CLR	R16
+    00D91 2711      CLR	R17
+    00D92 940E 05DE CALL	_LCD_write_byte
+(0728) 			LCD_write_byte(0x00,1);
+    00D94 E021      LDI	R18,1
+    00D95 E030      LDI	R19,0
+    00D96 2700      CLR	R16
+    00D97 2711      CLR	R17
+    00D98 940E 05DE CALL	_LCD_write_byte
+(0729) 			LCD_write_byte(0x00,1);
+    00D9A E021      LDI	R18,1
+    00D9B E030      LDI	R19,0
+    00D9C 2700      CLR	R16
+    00D9D 2711      CLR	R17
+    00D9E 940E 05DE CALL	_LCD_write_byte
+(0730) 			plane_bullet_x = 0;
+    00DA0 2422      CLR	R2
+    00DA1 9220 00AD STS	plane_bullet_x,R2
+(0731) 			plane_bullet_y = 0;
+    00DA3 9220 00AE STS	plane_bullet_y,R2
+(0732) 			layout1[0] = 0;
+    00DA5 9220 00A1 STS	layout1,R2
+(0733) 		}
+    00DA7 C265      RJMP	0x100D
+(0734) 		else if(plane_bullet_x + 1 == layout1[0] || (plane_bullet_x + 1 == layout1[0] + 1) || (plane_bullet_x + 1 == layout1[0] + 2) || (plane_bullet_x + 1 == layout1[0] + 3) || (plane_bullet_x + 1 == layout1[0] + 4))
+    00DA8 9140 00AD LDS	R20,plane_bullet_x
+    00DAA 2755      CLR	R21
+    00DAB 5F4F      SUBI	R20,0xFF
+    00DAC 4F5F      SBCI	R21,0xFF
+    00DAD 90A0 00A1 LDS	R10,layout1
+    00DAF 2C2A      MOV	R2,R10
+    00DB0 2433      CLR	R3
+    00DB1 1542      CP	R20,R2
+    00DB2 0553      CPC	R21,R3
+    00DB3 F0C9      BEQ	0x0DCD
+    00DB4 2D82      MOV	R24,R2
+    00DB5 2799      CLR	R25
+    00DB6 9601      ADIW	R24,1
+    00DB7 1748      CP	R20,R24
+    00DB8 0759      CPC	R21,R25
+    00DB9 F099      BEQ	0x0DCD
+    00DBA 2D82      MOV	R24,R2
+    00DBB 2799      CLR	R25
+    00DBC 9602      ADIW	R24,2
+    00DBD 1748      CP	R20,R24
+    00DBE 0759      CPC	R21,R25
+    00DBF F069      BEQ	0x0DCD
+    00DC0 2D82      MOV	R24,R2
+    00DC1 2799      CLR	R25
+    00DC2 9603      ADIW	R24,3
+    00DC3 1748      CP	R20,R24
+    00DC4 0759      CPC	R21,R25
+    00DC5 F039      BEQ	0x0DCD
+    00DC6 2D82      MOV	R24,R2
+    00DC7 2799      CLR	R25
+    00DC8 9604      ADIW	R24,4
+    00DC9 1748      CP	R20,R24
+    00DCA 0759      CPC	R21,R25
+    00DCB F009      BEQ	0x0DCD
+    00DCC C240      RJMP	0x100D
+(0735) 		{
+(0736) 			LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00DCD 9120 00AE LDS	R18,plane_bullet_y
+    00DCF 2733      CLR	R19
+    00DD0 9100 00AD LDS	R16,plane_bullet_x
+    00DD2 2711      CLR	R17
+    00DD3 940E 059F CALL	_LCD_set_XY
+(0737) 			LCD_write_byte(0x00,1);
+    00DD5 E021      LDI	R18,1
+    00DD6 E030      LDI	R19,0
+    00DD7 2700      CLR	R16
+    00DD8 2711      CLR	R17
+    00DD9 940E 05DE CALL	_LCD_write_byte
+(0738) 			LCD_set_XY(plane_bullet_x + 1,layout1[0]);
+    00DDB 9120 00A1 LDS	R18,layout1
+    00DDD 2733      CLR	R19
+    00DDE 9100 00AD LDS	R16,plane_bullet_x
+    00DE0 2711      CLR	R17
+    00DE1 5F0F      SUBI	R16,0xFF
+    00DE2 4F1F      SBCI	R17,0xFF
+    00DE3 940E 059F CALL	_LCD_set_XY
+(0739) 			LCD_write_byte(0x00,1);
+    00DE5 E021      LDI	R18,1
+    00DE6 E030      LDI	R19,0
+    00DE7 2700      CLR	R16
+    00DE8 2711      CLR	R17
+    00DE9 940E 05DE CALL	_LCD_write_byte
+(0740) 			LCD_write_byte(0x00,1);
+    00DEB E021      LDI	R18,1
+    00DEC E030      LDI	R19,0
+    00DED 2700      CLR	R16
+    00DEE 2711      CLR	R17
+    00DEF 940E 05DE CALL	_LCD_write_byte
+(0741) 			LCD_write_byte(0x00,1);
+    00DF1 E021      LDI	R18,1
+    00DF2 E030      LDI	R19,0
+    00DF3 2700      CLR	R16
+    00DF4 2711      CLR	R17
+    00DF5 940E 05DE CALL	_LCD_write_byte
+(0742) 			LCD_write_byte(0x00,1);
+    00DF7 E021      LDI	R18,1
+    00DF8 E030      LDI	R19,0
+    00DF9 2700      CLR	R16
+    00DFA 2711      CLR	R17
+    00DFB 940E 05DE CALL	_LCD_write_byte
+(0743) 			LCD_write_byte(0x00,1);
+    00DFD E021      LDI	R18,1
+    00DFE E030      LDI	R19,0
+    00DFF 2700      CLR	R16
+    00E00 2711      CLR	R17
+    00E01 940E 05DE CALL	_LCD_write_byte
+(0744) 			plane_bullet_x = 0;
+    00E03 2422      CLR	R2
+    00E04 9220 00AD STS	plane_bullet_x,R2
+(0745) 			plane_bullet_y = 0;
+    00E06 9220 00AE STS	plane_bullet_y,R2
+(0746) 			layout1[0] = 0;
+    00E08 9220 00A1 STS	layout1,R2
+(0747) 		}
+(0748) 	}
+    00E0A C202      RJMP	0x100D
+(0749) 	
+(0750) 	else if(plane_bullet_y == 2)
+    00E0B 9180 00AE LDS	R24,plane_bullet_y
+    00E0D 3082      CPI	R24,2
+    00E0E F009      BEQ	0x0E10
+    00E0F C0A7      RJMP	0x0EB7
+(0751) 	{
+(0752) 		if(plane_bullet_x == layout2[0] || (plane_bullet_x == layout2[0] + 1) || (plane_bullet_x == layout2[0] + 2) || (plane_bullet_x == layout2[0] + 3) || (plane_bullet_x == layout2[0] + 4))
+    00E10 90A0 00AD LDS	R10,plane_bullet_x
+    00E12 9140 00A3 LDS	R20,layout2
+    00E14 16A4      CP	R10,R20
+    00E15 F081      BEQ	0x0E26
+    00E16 2F84      MOV	R24,R20
+    00E17 5F8F      SUBI	R24,0xFF
+    00E18 16A8      CP	R10,R24
+    00E19 F061      BEQ	0x0E26
+    00E1A 2F84      MOV	R24,R20
+    00E1B 5F8E      SUBI	R24,0xFE
+    00E1C 16A8      CP	R10,R24
+    00E1D F041      BEQ	0x0E26
+    00E1E 2F84      MOV	R24,R20
+    00E1F 5F8D      SUBI	R24,0xFD
+    00E20 16A8      CP	R10,R24
+    00E21 F021      BEQ	0x0E26
+    00E22 2F84      MOV	R24,R20
+    00E23 5F8C      SUBI	R24,0xFC
+    00E24 16A8      CP	R10,R24
+    00E25 F571      BNE	0x0E54
+(0753) 		{
+(0754) 			LCD_set_XY(plane_bullet_x,layout2[0]);
+    00E26 9120 00A3 LDS	R18,layout2
+    00E28 2733      CLR	R19
+    00E29 9100 00AD LDS	R16,plane_bullet_x
+    00E2B 2711      CLR	R17
+    00E2C 940E 059F CALL	_LCD_set_XY
+(0755) 			LCD_write_byte(0x00,1);
+    00E2E E021      LDI	R18,1
+    00E2F E030      LDI	R19,0
+    00E30 2700      CLR	R16
+    00E31 2711      CLR	R17
+    00E32 940E 05DE CALL	_LCD_write_byte
+(0756) 			LCD_write_byte(0x00,1);
+    00E34 E021      LDI	R18,1
+    00E35 E030      LDI	R19,0
+    00E36 2700      CLR	R16
+    00E37 2711      CLR	R17
+    00E38 940E 05DE CALL	_LCD_write_byte
+(0757) 			LCD_write_byte(0x00,1);
+    00E3A E021      LDI	R18,1
+    00E3B E030      LDI	R19,0
+    00E3C 2700      CLR	R16
+    00E3D 2711      CLR	R17
+    00E3E 940E 05DE CALL	_LCD_write_byte
+(0758) 			LCD_write_byte(0x00,1);
+    00E40 E021      LDI	R18,1
+    00E41 E030      LDI	R19,0
+    00E42 2700      CLR	R16
+    00E43 2711      CLR	R17
+    00E44 940E 05DE CALL	_LCD_write_byte
+(0759) 			LCD_write_byte(0x00,1);
+    00E46 E021      LDI	R18,1
+    00E47 E030      LDI	R19,0
+    00E48 2700      CLR	R16
+    00E49 2711      CLR	R17
+    00E4A 940E 05DE CALL	_LCD_write_byte
+(0760) 			plane_bullet_x = 0;
+    00E4C 2422      CLR	R2
+    00E4D 9220 00AD STS	plane_bullet_x,R2
+(0761) 			plane_bullet_y = 0;
+    00E4F 9220 00AE STS	plane_bullet_y,R2
+(0762) 			layout2[0] = 0;
+    00E51 9220 00A3 STS	layout2,R2
+(0763) 		}
+    00E53 C1B9      RJMP	0x100D
+(0764) 		else if(plane_bullet_x + 1 == layout2[0] || (plane_bullet_x + 1 == layout2[0] + 1) || (plane_bullet_x + 1 == layout2[0] + 2) || (plane_bullet_x + 1 == layout2[0] + 3) || (plane_bullet_x + 1 == layout2[0] + 4))
+    00E54 9140 00AD LDS	R20,plane_bullet_x
+    00E56 2755      CLR	R21
+    00E57 5F4F      SUBI	R20,0xFF
+    00E58 4F5F      SBCI	R21,0xFF
+    00E59 90A0 00A3 LDS	R10,layout2
+    00E5B 2C2A      MOV	R2,R10
+    00E5C 2433      CLR	R3
+    00E5D 1542      CP	R20,R2
+    00E5E 0553      CPC	R21,R3
+    00E5F F0C9      BEQ	0x0E79
+    00E60 2D82      MOV	R24,R2
+    00E61 2799      CLR	R25
+    00E62 9601      ADIW	R24,1
+    00E63 1748      CP	R20,R24
+    00E64 0759      CPC	R21,R25
+    00E65 F099      BEQ	0x0E79
+    00E66 2D82      MOV	R24,R2
+    00E67 2799      CLR	R25
+    00E68 9602      ADIW	R24,2
+    00E69 1748      CP	R20,R24
+    00E6A 0759      CPC	R21,R25
+    00E6B F069      BEQ	0x0E79
+    00E6C 2D82      MOV	R24,R2
+    00E6D 2799      CLR	R25
+    00E6E 9603      ADIW	R24,3
+    00E6F 1748      CP	R20,R24
+    00E70 0759      CPC	R21,R25
+    00E71 F039      BEQ	0x0E79
+    00E72 2D82      MOV	R24,R2
+    00E73 2799      CLR	R25
+    00E74 9604      ADIW	R24,4
+    00E75 1748      CP	R20,R24
+    00E76 0759      CPC	R21,R25
+    00E77 F009      BEQ	0x0E79
+    00E78 C194      RJMP	0x100D
+(0765) 		{
+(0766) 			LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00E79 9120 00AE LDS	R18,plane_bullet_y
+    00E7B 2733      CLR	R19
+    00E7C 9100 00AD LDS	R16,plane_bullet_x
+    00E7E 2711      CLR	R17
+    00E7F 940E 059F CALL	_LCD_set_XY
+(0767) 			LCD_write_byte(0x00,1);
+    00E81 E021      LDI	R18,1
+    00E82 E030      LDI	R19,0
+    00E83 2700      CLR	R16
+    00E84 2711      CLR	R17
+    00E85 940E 05DE CALL	_LCD_write_byte
+(0768) 			LCD_set_XY(plane_bullet_x + 1,layout2[0]);
+    00E87 9120 00A3 LDS	R18,layout2
+    00E89 2733      CLR	R19
+    00E8A 9100 00AD LDS	R16,plane_bullet_x
+    00E8C 2711      CLR	R17
+    00E8D 5F0F      SUBI	R16,0xFF
+    00E8E 4F1F      SBCI	R17,0xFF
+    00E8F 940E 059F CALL	_LCD_set_XY
+(0769) 			LCD_write_byte(0x00,1);
+    00E91 E021      LDI	R18,1
+    00E92 E030      LDI	R19,0
+    00E93 2700      CLR	R16
+    00E94 2711      CLR	R17
+    00E95 940E 05DE CALL	_LCD_write_byte
+(0770) 			LCD_write_byte(0x00,1);
+    00E97 E021      LDI	R18,1
+    00E98 E030      LDI	R19,0
+    00E99 2700      CLR	R16
+    00E9A 2711      CLR	R17
+    00E9B 940E 05DE CALL	_LCD_write_byte
+(0771) 			LCD_write_byte(0x00,1);
+    00E9D E021      LDI	R18,1
+    00E9E E030      LDI	R19,0
+    00E9F 2700      CLR	R16
+    00EA0 2711      CLR	R17
+    00EA1 940E 05DE CALL	_LCD_write_byte
+(0772) 			LCD_write_byte(0x00,1);
+    00EA3 E021      LDI	R18,1
+    00EA4 E030      LDI	R19,0
+    00EA5 2700      CLR	R16
+    00EA6 2711      CLR	R17
+    00EA7 940E 05DE CALL	_LCD_write_byte
+(0773) 			LCD_write_byte(0x00,1);
+    00EA9 E021      LDI	R18,1
+    00EAA E030      LDI	R19,0
+    00EAB 2700      CLR	R16
+    00EAC 2711      CLR	R17
+    00EAD 940E 05DE CALL	_LCD_write_byte
+(0774) 			plane_bullet_x = 0;
+    00EAF 2422      CLR	R2
+    00EB0 9220 00AD STS	plane_bullet_x,R2
+(0775) 			plane_bullet_y = 0;
+    00EB2 9220 00AE STS	plane_bullet_y,R2
+(0776) 			layout2[0] = 0;
+    00EB4 9220 00A3 STS	layout2,R2
+(0777) 		}
+(0778) 	}
+    00EB6 C156      RJMP	0x100D
+(0779) 	
+(0780) 	else if(plane_bullet_y == 3)
+    00EB7 9180 00AE LDS	R24,plane_bullet_y
+    00EB9 3083      CPI	R24,3
+    00EBA F009      BEQ	0x0EBC
+    00EBB C0A7      RJMP	0x0F63
+(0781) 	{
+(0782) 		if(plane_bullet_x == layout3[0] || (plane_bullet_x == layout3[0] + 1) || (plane_bullet_x == layout3[0] + 2) || (plane_bullet_x == layout3[0] + 3) || (plane_bullet_x == layout3[0] + 4))
+    00EBC 90A0 00AD LDS	R10,plane_bullet_x
+    00EBE 9140 00A5 LDS	R20,layout3
+    00EC0 16A4      CP	R10,R20
+    00EC1 F081      BEQ	0x0ED2
+    00EC2 2F84      MOV	R24,R20
+    00EC3 5F8F      SUBI	R24,0xFF
+    00EC4 16A8      CP	R10,R24
+    00EC5 F061      BEQ	0x0ED2
+    00EC6 2F84      MOV	R24,R20
+    00EC7 5F8E      SUBI	R24,0xFE
+    00EC8 16A8      CP	R10,R24
+    00EC9 F041      BEQ	0x0ED2
+    00ECA 2F84      MOV	R24,R20
+    00ECB 5F8D      SUBI	R24,0xFD
+    00ECC 16A8      CP	R10,R24
+    00ECD F021      BEQ	0x0ED2
+    00ECE 2F84      MOV	R24,R20
+    00ECF 5F8C      SUBI	R24,0xFC
+    00ED0 16A8      CP	R10,R24
+    00ED1 F571      BNE	0x0F00
+(0783) 		{
+(0784) 			LCD_set_XY(plane_bullet_x,layout3[0]);
+    00ED2 9120 00A5 LDS	R18,layout3
+    00ED4 2733      CLR	R19
+    00ED5 9100 00AD LDS	R16,plane_bullet_x
+    00ED7 2711      CLR	R17
+    00ED8 940E 059F CALL	_LCD_set_XY
+(0785) 			LCD_write_byte(0x00,1);
+    00EDA E021      LDI	R18,1
+    00EDB E030      LDI	R19,0
+    00EDC 2700      CLR	R16
+    00EDD 2711      CLR	R17
+    00EDE 940E 05DE CALL	_LCD_write_byte
+(0786) 			LCD_write_byte(0x00,1);
+    00EE0 E021      LDI	R18,1
+    00EE1 E030      LDI	R19,0
+    00EE2 2700      CLR	R16
+    00EE3 2711      CLR	R17
+    00EE4 940E 05DE CALL	_LCD_write_byte
+(0787) 			LCD_write_byte(0x00,1);
+    00EE6 E021      LDI	R18,1
+    00EE7 E030      LDI	R19,0
+    00EE8 2700      CLR	R16
+    00EE9 2711      CLR	R17
+    00EEA 940E 05DE CALL	_LCD_write_byte
+(0788) 			LCD_write_byte(0x00,1);
+    00EEC E021      LDI	R18,1
+    00EED E030      LDI	R19,0
+    00EEE 2700      CLR	R16
+    00EEF 2711      CLR	R17
+    00EF0 940E 05DE CALL	_LCD_write_byte
+(0789) 			LCD_write_byte(0x00,1);
+    00EF2 E021      LDI	R18,1
+    00EF3 E030      LDI	R19,0
+    00EF4 2700      CLR	R16
+    00EF5 2711      CLR	R17
+    00EF6 940E 05DE CALL	_LCD_write_byte
+(0790) 			plane_bullet_x = 0;
+    00EF8 2422      CLR	R2
+    00EF9 9220 00AD STS	plane_bullet_x,R2
+(0791) 			plane_bullet_y = 0;
+    00EFB 9220 00AE STS	plane_bullet_y,R2
+(0792) 			layout3[0] = 0;
+    00EFD 9220 00A5 STS	layout3,R2
+(0793) 		}
+    00EFF C10D      RJMP	0x100D
+(0794) 		else if(plane_bullet_x + 1 == layout3[0] || (plane_bullet_x + 1 == layout3[0] + 1) || (plane_bullet_x + 1 == layout3[0] + 2) || (plane_bullet_x + 1 == layout3[0] + 3) || (plane_bullet_x + 1 == layout3[0] + 4))
+    00F00 9140 00AD LDS	R20,plane_bullet_x
+    00F02 2755      CLR	R21
+    00F03 5F4F      SUBI	R20,0xFF
+    00F04 4F5F      SBCI	R21,0xFF
+    00F05 90A0 00A5 LDS	R10,layout3
+    00F07 2C2A      MOV	R2,R10
+    00F08 2433      CLR	R3
+    00F09 1542      CP	R20,R2
+    00F0A 0553      CPC	R21,R3
+    00F0B F0C9      BEQ	0x0F25
+    00F0C 2D82      MOV	R24,R2
+    00F0D 2799      CLR	R25
+    00F0E 9601      ADIW	R24,1
+    00F0F 1748      CP	R20,R24
+    00F10 0759      CPC	R21,R25
+    00F11 F099      BEQ	0x0F25
+    00F12 2D82      MOV	R24,R2
+    00F13 2799      CLR	R25
+    00F14 9602      ADIW	R24,2
+    00F15 1748      CP	R20,R24
+    00F16 0759      CPC	R21,R25
+    00F17 F069      BEQ	0x0F25
+    00F18 2D82      MOV	R24,R2
+    00F19 2799      CLR	R25
+    00F1A 9603      ADIW	R24,3
+    00F1B 1748      CP	R20,R24
+    00F1C 0759      CPC	R21,R25
+    00F1D F039      BEQ	0x0F25
+    00F1E 2D82      MOV	R24,R2
+    00F1F 2799      CLR	R25
+    00F20 9604      ADIW	R24,4
+    00F21 1748      CP	R20,R24
+    00F22 0759      CPC	R21,R25
+    00F23 F009      BEQ	0x0F25
+    00F24 C0E8      RJMP	0x100D
+(0795) 		{
+(0796) 			LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00F25 9120 00AE LDS	R18,plane_bullet_y
+    00F27 2733      CLR	R19
+    00F28 9100 00AD LDS	R16,plane_bullet_x
+    00F2A 2711      CLR	R17
+    00F2B 940E 059F CALL	_LCD_set_XY
+(0797) 			LCD_write_byte(0x00,1);
+    00F2D E021      LDI	R18,1
+    00F2E E030      LDI	R19,0
+    00F2F 2700      CLR	R16
+    00F30 2711      CLR	R17
+    00F31 940E 05DE CALL	_LCD_write_byte
+(0798) 			LCD_set_XY(plane_bullet_x + 1,layout3[0]);
+    00F33 9120 00A5 LDS	R18,layout3
+    00F35 2733      CLR	R19
+    00F36 9100 00AD LDS	R16,plane_bullet_x
+    00F38 2711      CLR	R17
+    00F39 5F0F      SUBI	R16,0xFF
+    00F3A 4F1F      SBCI	R17,0xFF
+    00F3B 940E 059F CALL	_LCD_set_XY
+(0799) 			LCD_write_byte(0x00,1);
+    00F3D E021      LDI	R18,1
+    00F3E E030      LDI	R19,0
+    00F3F 2700      CLR	R16
+    00F40 2711      CLR	R17
+    00F41 940E 05DE CALL	_LCD_write_byte
+(0800) 			LCD_write_byte(0x00,1);
+    00F43 E021      LDI	R18,1
+    00F44 E030      LDI	R19,0
+    00F45 2700      CLR	R16
+    00F46 2711      CLR	R17
+    00F47 940E 05DE CALL	_LCD_write_byte
+(0801) 			LCD_write_byte(0x00,1);
+    00F49 E021      LDI	R18,1
+    00F4A E030      LDI	R19,0
+    00F4B 2700      CLR	R16
+    00F4C 2711      CLR	R17
+    00F4D 940E 05DE CALL	_LCD_write_byte
+(0802) 			LCD_write_byte(0x00,1);
+    00F4F E021      LDI	R18,1
+    00F50 E030      LDI	R19,0
+    00F51 2700      CLR	R16
+    00F52 2711      CLR	R17
+    00F53 940E 05DE CALL	_LCD_write_byte
+(0803) 			LCD_write_byte(0x00,1);
+    00F55 E021      LDI	R18,1
+    00F56 E030      LDI	R19,0
+    00F57 2700      CLR	R16
+    00F58 2711      CLR	R17
+    00F59 940E 05DE CALL	_LCD_write_byte
+(0804) 			plane_bullet_x = 0;
+    00F5B 2422      CLR	R2
+    00F5C 9220 00AD STS	plane_bullet_x,R2
+(0805) 			plane_bullet_y = 0;
+    00F5E 9220 00AE STS	plane_bullet_y,R2
+(0806) 			layout3[0] = 0;
+    00F60 9220 00A5 STS	layout3,R2
+(0807) 		}
+(0808) 	}
+    00F62 C0AA      RJMP	0x100D
+(0809) 	
+(0810) 	else if(plane_bullet_y == 4)
+    00F63 9180 00AE LDS	R24,plane_bullet_y
+    00F65 3084      CPI	R24,4
+    00F66 F009      BEQ	0x0F68
+    00F67 C0A5      RJMP	0x100D
+(0811) 	{
+(0812) 		if(plane_bullet_x == layout4[0] || (plane_bullet_x == layout4[0] + 1) || (plane_bullet_x == layout4[0] + 2) || (plane_bullet_x == layout4[0] + 3) || (plane_bullet_x == layout4[0] + 4))
+    00F68 90A0 00AD LDS	R10,plane_bullet_x
+    00F6A 9140 00A7 LDS	R20,layout4
+    00F6C 16A4      CP	R10,R20
+    00F6D F081      BEQ	0x0F7E
+    00F6E 2F84      MOV	R24,R20
+    00F6F 5F8F      SUBI	R24,0xFF
+    00F70 16A8      CP	R10,R24
+    00F71 F061      BEQ	0x0F7E
+    00F72 2F84      MOV	R24,R20
+    00F73 5F8E      SUBI	R24,0xFE
+    00F74 16A8      CP	R10,R24
+    00F75 F041      BEQ	0x0F7E
+    00F76 2F84      MOV	R24,R20
+    00F77 5F8D      SUBI	R24,0xFD
+    00F78 16A8      CP	R10,R24
+    00F79 F021      BEQ	0x0F7E
+    00F7A 2F84      MOV	R24,R20
+    00F7B 5F8C      SUBI	R24,0xFC
+    00F7C 16A8      CP	R10,R24
+    00F7D F571      BNE	0x0FAC
+(0813) 		{
+(0814) 			LCD_set_XY(plane_bullet_x,layout4[0]);
+    00F7E 9120 00A7 LDS	R18,layout4
+    00F80 2733      CLR	R19
+    00F81 9100 00AD LDS	R16,plane_bullet_x
+    00F83 2711      CLR	R17
+    00F84 940E 059F CALL	_LCD_set_XY
+(0815) 			LCD_write_byte(0x00,1);
+    00F86 E021      LDI	R18,1
+    00F87 E030      LDI	R19,0
+    00F88 2700      CLR	R16
+    00F89 2711      CLR	R17
+    00F8A 940E 05DE CALL	_LCD_write_byte
+(0816) 			LCD_write_byte(0x00,1);
+    00F8C E021      LDI	R18,1
+    00F8D E030      LDI	R19,0
+    00F8E 2700      CLR	R16
+    00F8F 2711      CLR	R17
+    00F90 940E 05DE CALL	_LCD_write_byte
+(0817) 			LCD_write_byte(0x00,1);
+    00F92 E021      LDI	R18,1
+    00F93 E030      LDI	R19,0
+    00F94 2700      CLR	R16
+    00F95 2711      CLR	R17
+    00F96 940E 05DE CALL	_LCD_write_byte
+(0818) 			LCD_write_byte(0x00,1);
+    00F98 E021      LDI	R18,1
+    00F99 E030      LDI	R19,0
+    00F9A 2700      CLR	R16
+    00F9B 2711      CLR	R17
+    00F9C 940E 05DE CALL	_LCD_write_byte
+(0819) 			LCD_write_byte(0x00,1);
+    00F9E E021      LDI	R18,1
+    00F9F E030      LDI	R19,0
+    00FA0 2700      CLR	R16
+    00FA1 2711      CLR	R17
+    00FA2 940E 05DE CALL	_LCD_write_byte
+(0820) 			plane_bullet_x = 0;
+    00FA4 2422      CLR	R2
+    00FA5 9220 00AD STS	plane_bullet_x,R2
+(0821) 			plane_bullet_y = 0;
+    00FA7 9220 00AE STS	plane_bullet_y,R2
+(0822) 			layout4[0] = 0;
+    00FA9 9220 00A7 STS	layout4,R2
+(0823) 		}
+    00FAB C061      RJMP	0x100D
+(0824) 		else if(plane_bullet_x + 1 == layout4[0] || (plane_bullet_x + 1 == layout4[0] + 1) || (plane_bullet_x + 1 == layout4[0] + 2) || (plane_bullet_x + 1 == layout4[0] + 3) || (plane_bullet_x + 1 == layout4[0] + 4))
+    00FAC 9140 00AD LDS	R20,plane_bullet_x
+    00FAE 2755      CLR	R21
+    00FAF 5F4F      SUBI	R20,0xFF
+    00FB0 4F5F      SBCI	R21,0xFF
+    00FB1 90A0 00A7 LDS	R10,layout4
+    00FB3 2C2A      MOV	R2,R10
+    00FB4 2433      CLR	R3
+    00FB5 1542      CP	R20,R2
+    00FB6 0553      CPC	R21,R3
+    00FB7 F0C1      BEQ	0x0FD0
+    00FB8 2D82      MOV	R24,R2
+    00FB9 2799      CLR	R25
+    00FBA 9601      ADIW	R24,1
+    00FBB 1748      CP	R20,R24
+    00FBC 0759      CPC	R21,R25
+    00FBD F091      BEQ	0x0FD0
+    00FBE 2D82      MOV	R24,R2
+    00FBF 2799      CLR	R25
+    00FC0 9602      ADIW	R24,2
+    00FC1 1748      CP	R20,R24
+    00FC2 0759      CPC	R21,R25
+    00FC3 F061      BEQ	0x0FD0
+    00FC4 2D82      MOV	R24,R2
+    00FC5 2799      CLR	R25
+    00FC6 9603      ADIW	R24,3
+    00FC7 1748      CP	R20,R24
+    00FC8 0759      CPC	R21,R25
+    00FC9 F031      BEQ	0x0FD0
+    00FCA 2D82      MOV	R24,R2
+    00FCB 2799      CLR	R25
+    00FCC 9604      ADIW	R24,4
+    00FCD 1748      CP	R20,R24
+    00FCE 0759      CPC	R21,R25
+    00FCF F5E9      BNE	0x100D
+(0825) 		{
+(0826) 			LCD_set_XY(plane_bullet_x,plane_bullet_y);
+    00FD0 9120 00AE LDS	R18,plane_bullet_y
+    00FD2 2733      CLR	R19
+    00FD3 9100 00AD LDS	R16,plane_bullet_x
+    00FD5 2711      CLR	R17
+    00FD6 940E 059F CALL	_LCD_set_XY
+(0827) 			LCD_write_byte(0x00,1);
+    00FD8 E021      LDI	R18,1
+    00FD9 E030      LDI	R19,0
+    00FDA 2700      CLR	R16
+    00FDB 2711      CLR	R17
+    00FDC 940E 05DE CALL	_LCD_write_byte
+(0828) 			LCD_set_XY(plane_bullet_x + 1,layout4[0]);
+    00FDE 9120 00A7 LDS	R18,layout4
+    00FE0 2733      CLR	R19
+    00FE1 9100 00AD LDS	R16,plane_bullet_x
+    00FE3 2711      CLR	R17
+    00FE4 5F0F      SUBI	R16,0xFF
+    00FE5 4F1F      SBCI	R17,0xFF
+    00FE6 940E 059F CALL	_LCD_set_XY
+(0829) 			LCD_write_byte(0x00,1);
+    00FE8 E021      LDI	R18,1
+    00FE9 E030      LDI	R19,0
+    00FEA 2700      CLR	R16
+    00FEB 2711      CLR	R17
+    00FEC 940E 05DE CALL	_LCD_write_byte
+(0830) 			LCD_write_byte(0x00,1);
+    00FEE E021      LDI	R18,1
+    00FEF E030      LDI	R19,0
+    00FF0 2700      CLR	R16
+    00FF1 2711      CLR	R17
+    00FF2 940E 05DE CALL	_LCD_write_byte
+(0831) 			LCD_write_byte(0x00,1);
+    00FF4 E021      LDI	R18,1
+    00FF5 E030      LDI	R19,0
+    00FF6 2700      CLR	R16
+    00FF7 2711      CLR	R17
+    00FF8 940E 05DE CALL	_LCD_write_byte
+(0832) 			LCD_write_byte(0x00,1);
+    00FFA E021      LDI	R18,1
+    00FFB E030      LDI	R19,0
+    00FFC 2700      CLR	R16
+    00FFD 2711      CLR	R17
+    00FFE 940E 05DE CALL	_LCD_write_byte
+(0833) 			LCD_write_byte(0x00,1);
+    01000 E021      LDI	R18,1
+    01001 E030      LDI	R19,0
+    01002 2700      CLR	R16
+    01003 2711      CLR	R17
+    01004 940E 05DE CALL	_LCD_write_byte
+(0834) 			plane_bullet_x = 0;
+    01006 2422      CLR	R2
+    01007 9220 00AD STS	plane_bullet_x,R2
+(0835) 			plane_bullet_y = 0;
+    01009 9220 00AE STS	plane_bullet_y,R2
+(0836) 			layout4[0] = 0;
+    0100B 9220 00A7 STS	layout4,R2
+(0837) 		}
+(0838) 	}
+    0100D 940C 1212 JMP	pop_xgset300C
+_sel3_menu:
+    0100F 9722      SBIW	R28,2
+(0839) }
+(0840) 
+(0841) 
+(0842) void sel3_menu()
+(0843) {
+(0844) 	LCDFull(0x00);
+    01010 2700      CLR	R16
+    01011 940E 0588 CALL	_LCDFull
+(0845) 	LCD_write_english_string(0,0,"  AircraftWar");
+    01013 ED8B      LDI	R24,0xDB
+    01014 E090      LDI	R25,0
+    01015 8399      STD	Y+1,R25
+    01016 8388      ST	Y,R24
+    01017 2722      CLR	R18
+    01018 2700      CLR	R16
+    01019 940E 05C9 CALL	_LCD_write_english_string
+(0846) 	LCD_write_english_string(0,2,"     ^ ^");
+    0101B ED82      LDI	R24,0xD2
+    0101C E090      LDI	R25,0
+    0101D 8399      STD	Y+1,R25
+    0101E 8388      ST	Y,R24
+    0101F E022      LDI	R18,2
+    01020 2700      CLR	R16
+    01021 940E 05C9 CALL	_LCD_write_english_string
+(0847) 	LCD_write_english_string(0,3,"      -");
+    01023 EC8A      LDI	R24,0xCA
+    01024 E090      LDI	R25,0
+    01025 8399      STD	Y+1,R25
+    01026 8388      ST	Y,R24
+    01027 E023      LDI	R18,3
+    01028 2700      CLR	R16
+    01029 940E 05C9 CALL	_LCD_write_english_string
+(0848) 	LCD_write_english_string(0,4," anykeytoplay");
+    0102B EB8C      LDI	R24,0xBC
+    0102C E090      LDI	R25,0
+    0102D 8399      STD	Y+1,R25
+    0102E 8388      ST	Y,R24
+    0102F E024      LDI	R18,4
+    01030 2700      CLR	R16
+    01031 940E 05C9 CALL	_LCD_write_english_string
+(0849) 	LCD_write_english_string(0,5,"    By Chen");
+    01033 EB80      LDI	R24,0xB0
+    01034 E090      LDI	R25,0
+    01035 8399      STD	Y+1,R25
+    01036 8388      ST	Y,R24
+    01037 E025      LDI	R18,5
+    01038 2700      CLR	R16
+    01039 940E 05C9 CALL	_LCD_write_english_string
+    0103B 9622      ADIW	R28,2
+    0103C 9508      RET
+_sel3_menu_work:
+  j                    --> Y,+1
+  game_init            --> R20
+  layout_number        --> R22
+  plane_die            --> R12
+  sel3_menu_work_flag  --> R10
+  i                    --> R14
+    0103D 940E 1202 CALL	push_xgsetF0FC
+(0850) }
+(0851) 
+(0852) void sel3_menu_work()
+(0853) {
+(0854) 	unsigned char sel3_menu_work_flag = 1;
+    0103F 24AA      CLR	R10
+    01040 94A3      INC	R10
+(0855) 	unsigned char game_init = 0;
+    01041 2744      CLR	R20
+(0856) 	unsigned char layout_number = 0;
+    01042 2766      CLR	R22
+(0857) 	unsigned char i,j;
+(0858) 	unsigned char plane_die = 0;
+    01043 24CC      CLR	R12
+    01044 C113      RJMP	0x1158
+(0859) 	while(sel3_menu_work_flag)
+(0860) 	{
+(0861) 		if(time_1s_ok)
+    01045 9020 009C LDS	R2,time_1s_ok
+    01047 2022      TST	R2
+    01048 F409      BNE	0x104A
+    01049 C0CF      RJMP	0x1119
+(0862) 		{
+(0863) 			time_1s_ok = 0;
+    0104A 2422      CLR	R2
+    0104B 9220 009C STS	time_1s_ok,R2
+(0864) 			if(plane_is_die())
+    0104D DA0A      RCALL	_plane_is_die
+    0104E 2300      TST	R16
+    0104F F011      BEQ	0x1052
+(0865) 			    plane_die = 1;
+    01050 24CC      CLR	R12
+    01051 94C3      INC	R12
+(0866) 			
+(0867) 			if(!plane_die)
+    01052 20CC      TST	R12
+    01053 F009      BEQ	0x1055
+    01054 C0C2      RJMP	0x1117
+(0868) 			{
+(0869) 			    if(game_init)
+    01055 2344      TST	R20
+    01056 F409      BNE	0x1058
+    01057 C0C1      RJMP	0x1119
+(0870) 		    	{
+(0871) 				    LCDFull(0x00);					//清屏
+    01058 2700      CLR	R16
+    01059 940E 0588 CALL	_LCDFull
+(0872) 					layout5[0] = layout4[0];		//障碍物下滑
+    0105B 9020 00A7 LDS	R2,layout4
+    0105D 9220 00A9 STS	layout5,R2
+(0873) 				    layout4[0] = layout3[0];
+    0105F 9020 00A5 LDS	R2,layout3
+    01061 9220 00A7 STS	layout4,R2
+(0874) 				    layout3[0] = layout2[0];
+    01063 9020 00A3 LDS	R2,layout2
+    01065 9220 00A5 STS	layout3,R2
+(0875) 				    layout2[0] = layout1[0];
+    01067 9020 00A1 LDS	R2,layout1
+    01069 9220 00A3 STS	layout2,R2
+(0876) 				    layout1[0] = layout0[0];
+    0106B 9020 009F LDS	R2,layout0
+    0106D 9220 00A1 STS	layout1,R2
+(0877) 				
+(0878) 				    layout0[0] = layout_number;		//伪随机生成障碍物
+    0106F 9360 009F STS	layout0,R22
+(0879) 				    layout_number += 22;
+    01071 5E6A      SUBI	R22,0xEA
+(0880) 				    if(layout_number >= 80)
+    01072 3560      CPI	R22,0x50
+    01073 F028      BCS	0x1079
+(0881) 					    layout_number = layout_number % 80;
+    01074 E510      LDI	R17,0x50
+    01075 2F06      MOV	R16,R22
+    01076 940E 11CF CALL	mod8u
+    01078 2F60      MOV	R22,R16
+(0882) 				
+(0883) 				    LCD_set_XY(layout0[0],0);		//画障碍物
+    01079 2722      CLR	R18
+    0107A 2733      CLR	R19
+    0107B 9100 009F LDS	R16,layout0
+    0107D 2711      CLR	R17
+    0107E 940E 059F CALL	_LCD_set_XY
+(0884) 				    for(i = 0;i < 5;i++)
+    01080 24EE      CLR	R14
+    01081 C008      RJMP	0x108A
+(0885) 				        LCD_write_byte(layout0[1],1);
+    01082 E021      LDI	R18,1
+    01083 E030      LDI	R19,0
+    01084 9100 00A0 LDS	R16,layout0+1
+    01086 2711      CLR	R17
+    01087 940E 05DE CALL	_LCD_write_byte
+    01089 94E3      INC	R14
+    0108A 2D8E      MOV	R24,R14
+    0108B 3085      CPI	R24,5
+    0108C F3A8      BCS	0x1082
+(0886) 				    LCD_set_XY(layout1[0],1);
+    0108D E021      LDI	R18,1
+    0108E E030      LDI	R19,0
+    0108F 9100 00A1 LDS	R16,layout1
+    01091 2711      CLR	R17
+    01092 940E 059F CALL	_LCD_set_XY
+(0887) 				    for(i = 0;i < 5;i++)
+    01094 24EE      CLR	R14
+    01095 C008      RJMP	0x109E
+(0888) 					    LCD_write_byte(layout1[1],1);
+    01096 E021      LDI	R18,1
+    01097 E030      LDI	R19,0
+    01098 9100 00A2 LDS	R16,layout1+1
+    0109A 2711      CLR	R17
+    0109B 940E 05DE CALL	_LCD_write_byte
+    0109D 94E3      INC	R14
+    0109E 2D8E      MOV	R24,R14
+    0109F 3085      CPI	R24,5
+    010A0 F3A8      BCS	0x1096
+(0889) 				    LCD_set_XY(layout2[0],2);
+    010A1 E022      LDI	R18,2
+    010A2 E030      LDI	R19,0
+    010A3 9100 00A3 LDS	R16,layout2
+    010A5 2711      CLR	R17
+    010A6 940E 059F CALL	_LCD_set_XY
+(0890) 				    for(i = 0;i < 5;i++)
+    010A8 24EE      CLR	R14
+    010A9 C008      RJMP	0x10B2
+(0891) 				    	LCD_write_byte(layout2[1],1);
+    010AA E021      LDI	R18,1
+    010AB E030      LDI	R19,0
+    010AC 9100 00A4 LDS	R16,layout2+1
+    010AE 2711      CLR	R17
+    010AF 940E 05DE CALL	_LCD_write_byte
+    010B1 94E3      INC	R14
+    010B2 2D8E      MOV	R24,R14
+    010B3 3085      CPI	R24,5
+    010B4 F3A8      BCS	0x10AA
+(0892) 				    LCD_set_XY(layout3[0],3);
+    010B5 E023      LDI	R18,3
+    010B6 E030      LDI	R19,0
+    010B7 9100 00A5 LDS	R16,layout3
+    010B9 2711      CLR	R17
+    010BA 940E 059F CALL	_LCD_set_XY
+(0893) 				    for(i = 0;i < 5;i++)
+    010BC 24EE      CLR	R14
+    010BD C008      RJMP	0x10C6
+(0894) 				    	LCD_write_byte(layout3[1],1);
+    010BE E021      LDI	R18,1
+    010BF E030      LDI	R19,0
+    010C0 9100 00A6 LDS	R16,layout3+1
+    010C2 2711      CLR	R17
+    010C3 940E 05DE CALL	_LCD_write_byte
+    010C5 94E3      INC	R14
+    010C6 2D8E      MOV	R24,R14
+    010C7 3085      CPI	R24,5
+    010C8 F3A8      BCS	0x10BE
+(0895) 				    LCD_set_XY(layout4[0],4);
+    010C9 E024      LDI	R18,4
+    010CA E030      LDI	R19,0
+    010CB 9100 00A7 LDS	R16,layout4
+    010CD 2711      CLR	R17
+    010CE 940E 059F CALL	_LCD_set_XY
+(0896) 				    for(i = 0;i < 5;i++)
+    010D0 24EE      CLR	R14
+    010D1 C008      RJMP	0x10DA
+(0897) 					    LCD_write_byte(layout4[1],1);
+    010D2 E021      LDI	R18,1
+    010D3 E030      LDI	R19,0
+    010D4 9100 00A8 LDS	R16,layout4+1
+    010D6 2711      CLR	R17
+    010D7 940E 05DE CALL	_LCD_write_byte
+    010D9 94E3      INC	R14
+    010DA 2D8E      MOV	R24,R14
+    010DB 3085      CPI	R24,5
+    010DC F3A8      BCS	0x10D2
+(0898) 				    LCD_set_XY(layout5[0],5);
+    010DD E025      LDI	R18,5
+    010DE E030      LDI	R19,0
+    010DF 9100 00A9 LDS	R16,layout5
+    010E1 2711      CLR	R17
+    010E2 940E 059F CALL	_LCD_set_XY
+(0899) 				    for(i = 0;i < 5;i++)
+    010E4 24EE      CLR	R14
+    010E5 C008      RJMP	0x10EE
+(0900) 					    LCD_write_byte(layout5[1],1);
+    010E6 E021      LDI	R18,1
+    010E7 E030      LDI	R19,0
+    010E8 9100 00AA LDS	R16,layout5+1
+    010EA 2711      CLR	R17
+    010EB 940E 05DE CALL	_LCD_write_byte
+    010ED 94E3      INC	R14
+    010EE 2D8E      MOV	R24,R14
+    010EF 3085      CPI	R24,5
+    010F0 F3A8      BCS	0x10E6
+(0901) 				
+(0902) 				    LCD_set_XY(plane_x,plane_y);	//画飞机，一个H字母
+    010F1 9120 00AC LDS	R18,plane_y
+    010F3 2733      CLR	R19
+    010F4 9100 00AB LDS	R16,plane_x
+    010F6 2711      CLR	R17
+    010F7 940E 059F CALL	_LCD_set_XY
+(0903) 				    LCD_write_byte(0XF8,1);
+    010F9 E021      LDI	R18,1
+    010FA E030      LDI	R19,0
+    010FB EF08      LDI	R16,0xF8
+    010FC E010      LDI	R17,0
+    010FD 940E 05DE CALL	_LCD_write_byte
+(0904) 					LCD_write_byte(0X20,1);
+    010FF E021      LDI	R18,1
+    01100 E030      LDI	R19,0
+    01101 E200      LDI	R16,0x20
+    01102 E010      LDI	R17,0
+    01103 940E 05DE CALL	_LCD_write_byte
+(0905) 					LCD_write_byte(0X20,1);
+    01105 E021      LDI	R18,1
+    01106 E030      LDI	R19,0
+    01107 E200      LDI	R16,0x20
+    01108 E010      LDI	R17,0
+    01109 940E 05DE CALL	_LCD_write_byte
+(0906) 					LCD_write_byte(0XF8,1);
+    0110B E021      LDI	R18,1
+    0110C E030      LDI	R19,0
+    0110D EF08      LDI	R16,0xF8
+    0110E E010      LDI	R17,0
+    0110F 940E 05DE CALL	_LCD_write_byte
+(0907) 					
+(0908) 					if(is_has_bullet())
+    01111 DB51      RCALL	_is_has_bullet
+    01112 2300      TST	R16
+    01113 F029      BEQ	0x1119
+(0909) 					{
+(0910) 						plane_bullet_move();
+    01114 DB5A      RCALL	_plane_bullet_move
+(0911) 						plane_bullet_want_die();
+    01115 DB9B      RCALL	_plane_bullet_want_die
+(0912) 					}
+(0913) 			    }
+(0914) 			}
+    01116 C002      RJMP	0x1119
+(0915) 			else
+(0916) 			{
+(0917) 			    game_over();
+    01117 D985      RCALL	_game_over
+(0918) 				sel3_menu_work_flag = 0;
+    01118 24AA      CLR	R10
+(0919) 			}
+(0920) 		}
+(0921) 		if(time_10ms_ok)
+    01119 9020 0097 LDS	R2,time_10ms_ok
+    0111B 2022      TST	R2
+    0111C F409      BNE	0x111E
+    0111D C03A      RJMP	0x1158
+(0922) 		{
+(0923) 			time_10ms_ok = 0;
+    0111E 2422      CLR	R2
+    0111F 9220 0097 STS	time_10ms_ok,R2
+(0924) 			switch(read_key())
+    01121 940E 0839 CALL	_read_key
+    01123 2EE0      MOV	R14,R16
+    01124 24FF      CLR	R15
+    01125 01C7      MOVW	R24,R14
+    01126 3081      CPI	R24,1
+    01127 E0E0      LDI	R30,0
+    01128 079E      CPC	R25,R30
+    01129 F049      BEQ	0x1133
+    0112A 3082      CPI	R24,2
+    0112B E0E0      LDI	R30,0
+    0112C 079E      CPC	R25,R30
+    0112D F071      BEQ	0x113C
+    0112E 3083      CPI	R24,3
+    0112F E0E0      LDI	R30,0
+    01130 079E      CPC	R25,R30
+    01131 F099      BEQ	0x1145
+    01132 C025      RJMP	0x1158
+(0925) 			{
+(0926) 				case SW8:
+(0927) 					if(game_init == 0)
+    01133 2344      TST	R20
+    01134 F429      BNE	0x113A
+(0928) 					{
+(0929) 						LCDFull(0x00);
+    01135 2700      CLR	R16
+    01136 940E 0588 CALL	_LCDFull
+(0930) 						game_init = 1;
+    01138 E041      LDI	R20,1
+(0931) 					}
+    01139 C01E      RJMP	0x1158
+(0932) 					else
+(0933) 						plane_left_move();
+    0113A D88D      RCALL	_plane_left_move
+(0934) 					break;
+    0113B C01C      RJMP	0x1158
+(0935) 				case key1_short:
+(0936) 					if(game_init == 0)
+    0113C 2344      TST	R20
+    0113D F429      BNE	0x1143
+(0937) 					{
+(0938) 						LCDFull(0x00);
+    0113E 2700      CLR	R16
+    0113F 940E 0588 CALL	_LCDFull
+(0939) 						game_init = 1;
+    01141 E041      LDI	R20,1
+(0940) 					}
+    01142 C015      RJMP	0x1158
+(0941) 					else
+(0942) 						plane_right_move();
+    01143 D8CD      RCALL	_plane_right_move
+(0943) 					break;
+    01144 C013      RJMP	0x1158
+(0944) 				case key1_long:
+(0945) 					if(game_init == 0)
+    01145 2344      TST	R20
+    01146 F429      BNE	0x114C
+(0946) 					{
+(0947) 					    LCDFull(0x00);
+    01147 2700      CLR	R16
+    01148 940E 0588 CALL	_LCDFull
+(0948) 						game_init = 1;
+    0114A E041      LDI	R20,1
+(0949) 					} 
+    0114B C00C      RJMP	0x1158
+(0950) 					else
+(0951) 					{
+(0952) 						if(!is_has_bullet())
+    0114C DB16      RCALL	_is_has_bullet
+    0114D 2EE0      MOV	R14,R16
+    0114E 2300      TST	R16
+    0114F F441      BNE	0x1158
+(0953) 						{
+(0954) 							plane_bullet_x = plane_x + 1;
+    01150 9180 00AB LDS	R24,plane_x
+    01152 5F8F      SUBI	R24,0xFF
+    01153 9380 00AD STS	plane_bullet_x,R24
+(0955) 							plane_bullet_y = 5;
+    01155 E085      LDI	R24,5
+    01156 9380 00AE STS	plane_bullet_y,R24
+    01158 20AA      TST	R10
+    01159 F009      BEQ	0x115B
+    0115A CEEA      RJMP	0x1045
+    0115B 940C 11F7 JMP	pop_xgsetF0FC
+_main:
+  menu_sel             --> R20
+  i                    --> R22
+    0115D 9722      SBIW	R28,2
+(0956) 						}
+(0957) 					}
+(0958) 					break;
+(0959) 			}
+(0960) 		}
+(0961) 	}
+(0962) }
+(0963) 
+(0964) 
+(0965) 
+(0966) 
+(0967) void main(void)
+(0968) {
+(0969) 	unsigned char menu_sel = 0;
+    0115E 2744      CLR	R20
+(0970) 	unsigned char i;
+(0971) 	
+(0972) 	init_devices();
+    0115F D854      RCALL	_init_devices
+(0973) 	LCDInit();
+    01160 940E 0569 CALL	_LCDInit
+(0974) 	UARTSend(0x55);
+    01162 E505      LDI	R16,0x55
+    01163 D860      RCALL	_UARTSend
+(0975) 	LCDFull(0x00);
+    01164 2700      CLR	R16
+    01165 940E 0588 CALL	_LCDFull
+(0976) 	main_menu();		//主界面
+    01167 D962      RCALL	_main_menu
+    01168 C05E      RJMP	0x11C7
+(0977) 	
+(0978) 	while(1)
+(0979) 	{
+(0980) 		if(time_10ms_ok)
+    01169 9020 0097 LDS	R2,time_10ms_ok
+    0116B 2022      TST	R2
+    0116C F409      BNE	0x116E
+    0116D C059      RJMP	0x11C7
+(0981) 		{
+(0982) 			time_10ms_ok = 0;
+    0116E 2422      CLR	R2
+    0116F 9220 0097 STS	time_10ms_ok,R2
+(0983) 			switch(read_key())
+    01171 940E 0839 CALL	_read_key
+    01173 2F60      MOV	R22,R16
+    01174 2777      CLR	R23
+    01175 3061      CPI	R22,1
+    01176 E0E0      LDI	R30,0
+    01177 077E      CPC	R23,R30
+    01178 F029      BEQ	0x117E
+    01179 3062      CPI	R22,2
+    0117A E0E0      LDI	R30,0
+    0117B 077E      CPC	R23,R30
+    0117C F1C1      BEQ	0x11B5
+    0117D C049      RJMP	0x11C7
+(0984) 			{
+(0985) 				case SW8:	//选择功能
+(0986) 					LCD_set_XY(0,menu_sel * 2);		//清除选择项
+    0117E 2F24      MOV	R18,R20
+    0117F 2733      CLR	R19
+    01180 0F22      LSL	R18
+    01181 1F33      ROL	R19
+    01182 2700      CLR	R16
+    01183 2711      CLR	R17
+    01184 940E 059F CALL	_LCD_set_XY
+(0987) 					for(i = 0;i < 12;i++)
+    01186 2766      CLR	R22
+    01187 C007      RJMP	0x118F
+(0988) 						LCD_write_byte(0x00,1);
+    01188 E021      LDI	R18,1
+    01189 E030      LDI	R19,0
+    0118A 2700      CLR	R16
+    0118B 2711      CLR	R17
+    0118C 940E 05DE CALL	_LCD_write_byte
+    0118E 9563      INC	R22
+    0118F 306C      CPI	R22,0xC
+    01190 F3B8      BCS	0x1188
+(0989) 					LCD_set_XY(0,menu_sel * 2 + 1);
+    01191 2F24      MOV	R18,R20
+    01192 2733      CLR	R19
+    01193 0F22      LSL	R18
+    01194 1F33      ROL	R19
+    01195 5F2F      SUBI	R18,0xFF
+    01196 4F3F      SBCI	R19,0xFF
+    01197 2700      CLR	R16
+    01198 2711      CLR	R17
+    01199 940E 059F CALL	_LCD_set_XY
+(0990) 					for(i = 0;i < 12;i++)
+    0119B 2766      CLR	R22
+    0119C C007      RJMP	0x11A4
+(0991) 						LCD_write_byte(0x00,1);
+    0119D E021      LDI	R18,1
+    0119E E030      LDI	R19,0
+    0119F 2700      CLR	R16
+    011A0 2711      CLR	R17
+    011A1 940E 05DE CALL	_LCD_write_byte
+    011A3 9563      INC	R22
+    011A4 306C      CPI	R22,0xC
+    011A5 F3B8      BCS	0x119D
+(0992) 					
+(0993) 					if(menu_sel == 2)
+    011A6 3042      CPI	R20,2
+    011A7 F411      BNE	0x11AA
+(0994) 						menu_sel = 0;
+    011A8 2744      CLR	R20
+    011A9 C001      RJMP	0x11AB
+(0995) 					else
+(0996) 						menu_sel++;
+    011AA 9543      INC	R20
+(0997) 					
+(0998) 					LCD_DispCHstr(0,menu_sel * 2,"》");		//重新画选择项
+    011AB E08F      LDI	R24,0xF
+    011AC E091      LDI	R25,1
+    011AD 8399      STD	Y+1,R25
+    011AE 8388      ST	Y,R24
+    011AF 2F24      MOV	R18,R20
+    011B0 0F22      LSL	R18
+    011B1 2700      CLR	R16
+    011B2 940E 060D CALL	_LCD_DispCHstr
+(0999) 				break;
+    011B4 C012      RJMP	0x11C7
+(1000) 				
+(1001) 				case key1_short:
+(1002) 					LCDFull(0x00);
+    011B5 2700      CLR	R16
+    011B6 940E 0588 CALL	_LCDFull
+(1003) 					if(menu_sel == 0)
+    011B8 2344      TST	R20
+    011B9 F421      BNE	0x11BE
+(1004) 					{
+(1005) 						menu_sel = 0;
+    011BA 2744      CLR	R20
+(1006) 						sel1_menu();
+    011BB D934      RCALL	_sel1_menu
+(1007) 						sel1_menu_work();
+    011BC D941      RCALL	_sel1_menu_work
+(1008) 					}
+    011BD C009      RJMP	0x11C7
+(1009) 					else if(menu_sel == 1)
+    011BE 3041      CPI	R20,1
+    011BF F421      BNE	0x11C4
+(1010) 					{
+(1011) 						menu_sel = 0;
+    011C0 2744      CLR	R20
+(1012) 						sel2_menu();
+    011C1 DA0E      RCALL	_sel2_menu
+(1013) 						sel2_menu_work();
+    011C2 DA23      RCALL	_sel2_menu_work
+(1014) 					}
+    011C3 C003      RJMP	0x11C7
+(1015) 					else
+(1016) 					{
+(1017) 						menu_sel = 0;
+    011C4 2744      CLR	R20
+(1018) 						sel3_menu();
+    011C5 DE49      RCALL	_sel3_menu
+(1019) 						sel3_menu_work();
+FILE: <library>
+    011C6 DE76      RCALL	_sel3_menu_work
+    011C7 CFA1      RJMP	0x1169
+    011C8 9622      ADIW	R28,2
+    011C9 9508      RET
+push_arg4:
+    011CA 933A      ST	-Y,R19
+    011CB 932A      ST	-Y,R18
+push_arg2:
+    011CC 931A      ST	-Y,R17
+    011CD 930A      ST	-Y,R16
+    011CE 9508      RET
+mod8u:
+    011CF 9468      BSET	6
+    011D0 C001      RJMP	xdiv8u
+div8u:
+    011D1 94E8      BCLR	6
+xdiv8u:
+    011D2 932A      ST	-Y,R18
+    011D3 92FA      ST	-Y,R15
+    011D4 92EA      ST	-Y,R14
+    011D5 24FF      CLR	R15
+    011D6 24EE      CLR	R14
+    011D7 E120      LDI	R18,0x10
+    011D8 0F00      LSL	R16
+    011D9 1CFF      ROL	R15
+    011DA 1CEE      ROL	R14
+    011DB 16E1      CP	R14,R17
+    011DC F010      BCS	0x11DF
+    011DD 1AE1      SUB	R14,R17
+    011DE 9503      INC	R16
+    011DF 952A      DEC	R18
+    011E0 F7B9      BNE	0x11D8
+    011E1 F40E      BRTC	0x11E3
+    011E2 2D0E      MOV	R16,R14
+    011E3 90E9      LD	R14,Y+
+    011E4 90F9      LD	R15,Y+
+    011E5 9129      LD	R18,Y+
+    011E6 9508      RET
+empy16s:
+    011E7 920A      ST	-Y,R0
+    011E8 921A      ST	-Y,R1
+    011E9 938A      ST	-Y,R24
+    011EA 939A      ST	-Y,R25
+    011EB 9F02      MUL	R16,R18
+    011EC 01C0      MOVW	R24,R0
+    011ED 9F12      MUL	R17,R18
+    011EE 0D90      ADD	R25,R0
+    011EF 9F03      MUL	R16,R19
+    011F0 0D90      ADD	R25,R0
+    011F1 018C      MOVW	R16,R24
+    011F2 9199      LD	R25,Y+
+    011F3 9189      LD	R24,Y+
+    011F4 9019      LD	R1,Y+
+    011F5 9009      LD	R0,Y+
+    011F6 9508      RET
+pop_xgsetF0FC:
+    011F7 90A9      LD	R10,Y+
+    011F8 90B9      LD	R11,Y+
+    011F9 90C9      LD	R12,Y+
+    011FA 90D9      LD	R13,Y+
+    011FB 90E9      LD	R14,Y+
+    011FC 90F9      LD	R15,Y+
+    011FD 9149      LD	R20,Y+
+    011FE 9159      LD	R21,Y+
+    011FF 9169      LD	R22,Y+
+    01200 9179      LD	R23,Y+
+    01201 9508      RET
+push_xgsetF0FC:
+    01202 937A      ST	-Y,R23
+    01203 936A      ST	-Y,R22
+push_xgset30FC:
+    01204 935A      ST	-Y,R21
+    01205 934A      ST	-Y,R20
+push_xgset00FC:
+    01206 92FA      ST	-Y,R15
+    01207 92EA      ST	-Y,R14
+push_xgset003C:
+    01208 92DA      ST	-Y,R13
+    01209 92CA      ST	-Y,R12
+    0120A 92BA      ST	-Y,R11
+    0120B 92AA      ST	-Y,R10
+    0120C 9508      RET
+push_xgset300C:
+    0120D 935A      ST	-Y,R21
+    0120E 934A      ST	-Y,R20
+    0120F 92BA      ST	-Y,R11
+    01210 92AA      ST	-Y,R10
+    01211 9508      RET
+pop_xgset300C:
+    01212 90A9      LD	R10,Y+
+    01213 90B9      LD	R11,Y+
+    01214 9149      LD	R20,Y+
+    01215 9159      LD	R21,Y+
+    01216 9508      RET
+push_xgsetF000:
+    01217 937A      ST	-Y,R23
+    01218 936A      ST	-Y,R22
+    01219 935A      ST	-Y,R21
+    0121A 934A      ST	-Y,R20
+    0121B 9508      RET
+pop_xgsetF000:
+    0121C 9149      LD	R20,Y+
+    0121D 9159      LD	R21,Y+
+    0121E 9169      LD	R22,Y+
+    0121F 9179      LD	R23,Y+
+    01220 9508      RET
+push_xgsetF00C:
+    01221 937A      ST	-Y,R23
+    01222 936A      ST	-Y,R22
+    01223 935A      ST	-Y,R21
+    01224 934A      ST	-Y,R20
+    01225 92BA      ST	-Y,R11
+    01226 92AA      ST	-Y,R10
+    01227 9508      RET
+pop_xgsetF00C:
+    01228 90A9      LD	R10,Y+
+    01229 90B9      LD	R11,Y+
+    0122A 9149      LD	R20,Y+
+    0122B 9159      LD	R21,Y+
+    0122C 9169      LD	R22,Y+
+    0122D 9179      LD	R23,Y+
+    0122E 9508      RET
+push_xgset303C:
+    0122F 935A      ST	-Y,R21
+    01230 934A      ST	-Y,R20
+    01231 92DA      ST	-Y,R13
+    01232 92CA      ST	-Y,R12
+    01233 92BA      ST	-Y,R11
+    01234 92AA      ST	-Y,R10
+    01235 9508      RET
+pop_xgset303C:
+    01236 90A9      LD	R10,Y+
+    01237 90B9      LD	R11,Y+
+    01238 90C9      LD	R12,Y+
+    01239 90D9      LD	R13,Y+
+    0123A 9149      LD	R20,Y+
+    0123B 9159      LD	R21,Y+
+    0123C 9508      RET
+push_xgsetF03C:
+    0123D 937A      ST	-Y,R23
+    0123E 936A      ST	-Y,R22
+    0123F 935A      ST	-Y,R21
+    01240 934A      ST	-Y,R20
+    01241 92DA      ST	-Y,R13
+    01242 92CA      ST	-Y,R12
+    01243 92BA      ST	-Y,R11
+    01244 92AA      ST	-Y,R10
+    01245 9508      RET
+pop_xgsetF03C:
+    01246 90A9      LD	R10,Y+
+    01247 90B9      LD	R11,Y+
+    01248 90C9      LD	R12,Y+
+    01249 90D9      LD	R13,Y+
+    0124A 9149      LD	R20,Y+
+    0124B 9159      LD	R21,Y+
+    0124C 9169      LD	R22,Y+
+    0124D 9179      LD	R23,Y+
+    0124E 9508      RET
+neg32:
+    0124F 9500      COM	R16
+    01250 9510      COM	R17
+    01251 9520      COM	R18
+    01252 9530      COM	R19
+    01253 5F0F      SUBI	R16,0xFF
+    01254 4F1F      SBCI	R17,0xFF
+    01255 4F2F      SBCI	R18,0xFF
+    01256 4F3F      SBCI	R19,0xFF
+    01257 9508      RET
+lpm32:
+    01258 93EA      ST	-Y,R30
+    01259 93FA      ST	-Y,R31
+    0125A 920A      ST	-Y,R0
+    0125B 2FE0      MOV	R30,R16
+    0125C 2FF1      MOV	R31,R17
+    0125D 95C8      LPM
+    0125E 2D00      MOV	R16,R0
+    0125F 9631      ADIW	R30,1
+    01260 95C8      LPM
+    01261 2D10      MOV	R17,R0
+    01262 9631      ADIW	R30,1
+    01263 95C8      LPM
+    01264 2D20      MOV	R18,R0
+    01265 9631      ADIW	R30,1
+    01266 95C8      LPM
+    01267 2D30      MOV	R19,R0
+    01268 9009      LD	R0,Y+
+    01269 91F9      LD	R31,Y+
+    0126A 91E9      LD	R30,Y+
+    0126B 9508      RET
+lsl8:
+    0126C 2311      TST	R17
+    0126D F019      BEQ	0x1271
+    0126E 0F00      LSL	R16
+    0126F 951A      DEC	R17
+    01270 CFFB      RJMP	lsl8
+    01271 9508      RET
+fpint:
+    01272 924A      ST	-Y,R4
+    01273 925A      ST	-Y,R5
+    01274 926A      ST	-Y,R6
+    01275 938A      ST	-Y,R24
+    01276 940E 1372 CALL	unpacku
+    01278 F111      BEQ	0x129B
+    01279 2055      TST	R5
+    0127A F0E2      BMI	0x1297
+    0127B E18F      LDI	R24,0x1F
+    0127C 1648      CP	R4,R24
+    0127D F4C0      BCC	0x1296
+    0127E E187      LDI	R24,0x17
+    0127F 1648      CP	R4,R24
+    01280 F0D1      BEQ	0x129B
+    01281 F458      BCC	0x128D
+    01282 9441      NEG	R4
+    01283 EE89      LDI	R24,0xE9
+    01284 1A48      SUB	R4,R24
+    01285 C005      RJMP	0x128B
+    01286 9535      ASR	R19
+    01287 9527      ROR	R18
+    01288 9517      ROR	R17
+    01289 9507      ROR	R16
+    0128A 944A      DEC	R4
+    0128B F7D1      BNE	0x1286
+    0128C C00E      RJMP	0x129B
+    0128D E187      LDI	R24,0x17
+    0128E 1A48      SUB	R4,R24
+    0128F 0F00      LSL	R16
+    01290 1F11      ROL	R17
+    01291 1F22      ROL	R18
+    01292 1F33      ROL	R19
+    01293 944A      DEC	R4
+    01294 F7D1      BNE	0x128F
+    01295 C005      RJMP	0x129B
+    01296 E73F      LDI	R19,0x7F
+    01297 2F23      MOV	R18,R19
+    01298 2F13      MOV	R17,R19
+    01299 2F03      MOV	R16,R19
+    0129A C004      RJMP	0x129F
+    0129B 2066      TST	R6
+    0129C F011      BEQ	0x129F
+    0129D 940E 124F CALL	neg32
+    0129F 9189      LD	R24,Y+
+    012A0 9069      LD	R6,Y+
+    012A1 9059      LD	R5,Y+
+    012A2 9049      LD	R4,Y+
+    012A3 9508      RET
+uint2fp:
+    012A4 9468      BSET	6
+    012A5 C001      RJMP	0x12A7
+int2fp:
+    012A6 94E8      BCLR	6
+    012A7 2722      CLR	R18
+    012A8 2733      CLR	R19
+    012A9 F046      BRTS	0x12B2
+    012AA FD17      SBRC	R17,7
+    012AB 9520      COM	R18
+    012AC FD17      SBRC	R17,7
+    012AD 9530      COM	R19
+    012AE C003      RJMP	0x12B2
+ulong2fp:
+    012AF 9468      BSET	6
+    012B0 C001      RJMP	0x12B2
+long2fp:
+    012B1 94E8      BCLR	6
+    012B2 924A      ST	-Y,R4
+    012B3 925A      ST	-Y,R5
+    012B4 926A      ST	-Y,R6
+    012B5 938A      ST	-Y,R24
+    012B6 E187      LDI	R24,0x17
+    012B7 2E48      MOV	R4,R24
+    012B8 2455      CLR	R5
+    012B9 2466      CLR	R6
+    012BA F036      BRTS	0x12C1
+    012BB 2333      TST	R19
+    012BC F422      BPL	0x12C1
+    012BD 940E 124F CALL	neg32
+    012BF E880      LDI	R24,0x80
+    012C0 2E68      MOV	R6,R24
+    012C1 940E 138B CALL	normalize_and_pack
+    012C3 9189      LD	R24,Y+
+    012C4 9069      LD	R6,Y+
+    012C5 9059      LD	R5,Y+
+    012C6 9049      LD	R4,Y+
+    012C7 9508      RET
+fpdiv1:
+    012C8 93FA      ST	-Y,R31
+    012C9 93EA      ST	-Y,R30
+    012CA 81EA      LDD	R30,Y+2
+    012CB 81FB      LDD	R31,Y+3
+    012CC D027      RCALL	0x12F4
+    012CD 91E9      LD	R30,Y+
+    012CE 91F9      LD	R31,Y+
+    012CF 9622      ADIW	R28,2
+    012D0 9508      RET
+fpdiv2:
+    012D1 93FA      ST	-Y,R31
+    012D2 93EA      ST	-Y,R30
+    012D3 2FEC      MOV	R30,R28
+    012D4 2FFD      MOV	R31,R29
+    012D5 9632      ADIW	R30,2
+    012D6 D01D      RCALL	0x12F4
+    012D7 91E9      LD	R30,Y+
+    012D8 91F9      LD	R31,Y+
+    012D9 9624      ADIW	R28,4
+    012DA 9508      RET
+fpdiv1x:
+    012DB 93FA      ST	-Y,R31
+    012DC 93EA      ST	-Y,R30
+    012DD 81EA      LDD	R30,Y+2
+    012DE 81FB      LDD	R31,Y+3
+    012DF D014      RCALL	0x12F4
+    012E0 91E9      LD	R30,Y+
+    012E1 91F9      LD	R31,Y+
+    012E2 8339      STD	Y+1,R19
+    012E3 8328      ST	Y,R18
+    012E4 931A      ST	-Y,R17
+    012E5 930A      ST	-Y,R16
+    012E6 9508      RET
+fpdiv2x:
+    012E7 93FA      ST	-Y,R31
+    012E8 93EA      ST	-Y,R30
+    012E9 2FEC      MOV	R30,R28
+    012EA 2FFD      MOV	R31,R29
+    012EB 9632      ADIW	R30,2
+    012EC D007      RCALL	0x12F4
+    012ED 91E9      LD	R30,Y+
+    012EE 91F9      LD	R31,Y+
+    012EF 833B      STD	Y+3,R19
+    012F0 832A      STD	Y+2,R18
+    012F1 8319      STD	Y+1,R17
+    012F2 8308      ST	Y,R16
+    012F3 9508      RET
+    012F4 920A      ST	-Y,R0
+    012F5 921A      ST	-Y,R1
+    012F6 922A      ST	-Y,R2
+    012F7 923A      ST	-Y,R3
+    012F8 940E 13D0 CALL	saveFPRegs
+    012FA 933A      ST	-Y,R19
+    012FB 932A      ST	-Y,R18
+    012FC 931A      ST	-Y,R17
+    012FD 930A      ST	-Y,R16
+    012FE 8100      LD	R16,Z
+    012FF 8111      LDD	R17,Z+1
+    01300 8122      LDD	R18,Z+2
+    01301 8133      LDD	R19,Z+3
+    01302 940E 1372 CALL	unpacku
+    01304 F409      BNE	0x1306
+    01305 C057      RJMP	0x135D
+    01306 2CE6      MOV	R14,R6
+    01307 2CD5      MOV	R13,R5
+    01308 2CC4      MOV	R12,R4
+    01309 2EB3      MOV	R11,R19
+    0130A 2EA2      MOV	R10,R18
+    0130B 2E91      MOV	R9,R17
+    0130C 2E80      MOV	R8,R16
+    0130D 9109      LD	R16,Y+
+    0130E 9119      LD	R17,Y+
+    0130F 9129      LD	R18,Y+
+    01310 9139      LD	R19,Y+
+    01311 940E 1372 CALL	unpacku
+    01313 F1A1      BEQ	0x1348
+    01314 246E      EOR	R6,R14
+    01315 184C      SUB	R4,R12
+    01316 085D      SBC	R5,R13
+    01317 E880      LDI	R24,0x80
+    01318 1648      CP	R4,R24
+    01319 0653      CPC	R5,R19
+    0131A F00C      BLT	0x131C
+    0131B C033      RJMP	0x134F
+    0131C E881      LDI	R24,0x81
+    0131D 1648      CP	R4,R24
+    0131E EF8F      LDI	R24,0xFF
+    0131F 0658      CPC	R5,R24
+    01320 F40C      BGE	0x1322
+    01321 C036      RJMP	0x1358
+    01322 E280      LDI	R24,0x20
+    01323 2433      CLR	R3
+    01324 2E23      MOV	R2,R19
+    01325 2E12      MOV	R1,R18
+    01326 2E01      MOV	R0,R17
+    01327 2F30      MOV	R19,R16
+    01328 2722      CLR	R18
+    01329 2711      CLR	R17
+    0132A 2700      CLR	R16
+    0132B 9426      LSR	R2
+    0132C 9417      ROR	R1
+    0132D 9407      ROR	R0
+    0132E 9537      ROR	R19
+    0132F 9527      ROR	R18
+    01330 0F00      LSL	R16
+    01331 1F11      ROL	R17
+    01332 1F22      ROL	R18
+    01333 1F33      ROL	R19
+    01334 1C00      ROL	R0
+    01335 1C11      ROL	R1
+    01336 1C22      ROL	R2
+    01337 1C33      ROL	R3
+    01338 F028      BCS	0x133E
+    01339 1808      SUB	R0,R8
+    0133A 0819      SBC	R1,R9
+    0133B 082A      SBC	R2,R10
+    0133C 083B      SBC	R3,R11
+    0133D C004      RJMP	0x1342
+    0133E 0C08      ADD	R0,R8
+    0133F 1C19      ADC	R1,R9
+    01340 1C2A      ADC	R2,R10
+    01341 1C3B      ADC	R3,R11
+    01342 F00A      BMI	0x1344
+    01343 6001      ORI	R16,1
+    01344 958A      DEC	R24
+    01345 F751      BNE	0x1330
+    01346 940E 138B CALL	normalize_and_pack
+    01348 940E 13DF CALL	restoreFPRegs
+    0134A 9039      LD	R3,Y+
+    0134B 9029      LD	R2,Y+
+    0134C 9019      LD	R1,Y+
+    0134D 9009      LD	R0,Y+
+    0134E 9508      RET
+    0134F EF0F      LDI	R16,0xFF
+    01350 2F10      MOV	R17,R16
+    01351 E72F      LDI	R18,0x7F
+    01352 E73F      LDI	R19,0x7F
+    01353 2066      TST	R6
+    01354 F399      BEQ	0x1348
+    01355 940E 124F CALL	neg32
+    01357 CFF0      RJMP	0x1348
+    01358 2700      CLR	R16
+    01359 2F10      MOV	R17,R16
+    0135A 2F20      MOV	R18,R16
+    0135B 2F30      MOV	R19,R16
+    0135C CFEB      RJMP	0x1348
+    0135D 9109      LD	R16,Y+
+    0135E 9119      LD	R17,Y+
+    0135F 9129      LD	R18,Y+
+    01360 9139      LD	R19,Y+
+    01361 CFED      RJMP	0x134F
+unpacks:
+    01362 D00F      RCALL	unpacku
+    01363 F029      BEQ	0x1369
+    01364 2066      TST	R6
+    01365 F011      BEQ	0x1368
+    01366 940E 124F CALL	neg32
+    01368 9498      BCLR	1
+    01369 9508      RET
+tstR16_R19:
+    0136A 2300      TST	R16
+    0136B F429      BNE	0x1371
+    0136C 2311      TST	R17
+    0136D F419      BNE	0x1371
+    0136E 2322      TST	R18
+    0136F F409      BNE	0x1371
+    01370 2333      TST	R19
+    01371 9508      RET
+unpacku:
+    01372 DFF7      RCALL	tstR16_R19
+    01373 F099      BEQ	0x1387
+    01374 938A      ST	-Y,R24
+    01375 2E63      MOV	R6,R19
+    01376 E880      LDI	R24,0x80
+    01377 2268      AND	R6,R24
+    01378 0F22      LSL	R18
+    01379 1F33      ROL	R19
+    0137A 2E43      MOV	R4,R19
+    0137B E78F      LDI	R24,0x7F
+    0137C 1A48      SUB	R4,R24
+    0137D 2455      CLR	R5
+    0137E 2788      CLR	R24
+    0137F 0A58      SBC	R5,R24
+    01380 9526      LSR	R18
+    01381 E830      LDI	R19,0x80
+    01382 2B23      OR	R18,R19
+    01383 2733      CLR	R19
+    01384 9189      LD	R24,Y+
+    01385 9498      BCLR	1
+    01386 9508      RET
+    01387 2444      CLR	R4
+    01388 2455      CLR	R5
+    01389 2466      CLR	R6
+    0138A 9508      RET
+normalize_and_pack:
+    0138B DFDE      RCALL	tstR16_R19
+    0138C F409      BNE	0x138E
+    0138D 9508      RET
+    0138E 93AA      ST	-Y,R26
+    0138F 93BA      ST	-Y,R27
+    01390 01D2      MOVW	R26,R4
+    01391 939A      ST	-Y,R25
+    01392 938A      ST	-Y,R24
+    01393 E78E      LDI	R24,0x7E
+    01394 E090      LDI	R25,0
+    01395 2333      TST	R19
+    01396 F049      BEQ	0x13A0
+    01397 9536      LSR	R19
+    01398 9527      ROR	R18
+    01399 9517      ROR	R17
+    0139A 9507      ROR	R16
+    0139B 17A8      CP	R26,R24
+    0139C 07B9      CPC	R27,R25
+    0139D F4CC      BGE	0x13B7
+    0139E 9611      ADIW	R26,1
+    0139F CFF5      RJMP	0x1395
+    013A0 9580      COM	R24
+    013A1 9590      COM	R25
+    013A2 9601      ADIW	R24,1
+    013A3 2322      TST	R18
+    013A4 F0BA      BMI	0x13BC
+    013A5 0F00      LSL	R16
+    013A6 1F11      ROL	R17
+    013A7 1F22      ROL	R18
+    013A8 17A8      CP	R26,R24
+    013A9 07B9      CPC	R27,R25
+    013AA F014      BLT	0x13AD
+    013AB 9711      SBIW	R26,1
+    013AC CFF6      RJMP	0x13A3
+    013AD 2700      CLR	R16
+    013AE 2711      CLR	R17
+    013AF 2722      CLR	R18
+    013B0 2733      CLR	R19
+    013B1 9189      LD	R24,Y+
+    013B2 9199      LD	R25,Y+
+    013B3 012D      MOVW	R4,R26
+    013B4 91B9      LD	R27,Y+
+    013B5 91A9      LD	R26,Y+
+    013B6 9508      RET
+    013B7 2733      CLR	R19
+    013B8 EF0F      LDI	R16,0xFF
+    013B9 2F10      MOV	R17,R16
+    013BA E72F      LDI	R18,0x7F
+    013BB 2F32      MOV	R19,R18
+    013BC 9189      LD	R24,Y+
+    013BD 9199      LD	R25,Y+
+    013BE 012D      MOVW	R4,R26
+    013BF C002      RJMP	0x13C2
+pack:
+    013C0 93AA      ST	-Y,R26
+    013C1 93BA      ST	-Y,R27
+    013C2 DFA7      RCALL	tstR16_R19
+    013C3 F049      BEQ	0x13CD
+    013C4 01D2      MOVW	R26,R4
+    013C5 58A1      SUBI	R26,0x81
+    013C6 4FBF      SBCI	R27,0xFF
+    013C7 012D      MOVW	R4,R26
+    013C8 2D34      MOV	R19,R4
+    013C9 0F22      LSL	R18
+    013CA 9536      LSR	R19
+    013CB 9527      ROR	R18
+    013CC 2936      OR	R19,R6
+    013CD 91B9      LD	R27,Y+
+    013CE 91A9      LD	R26,Y+
+    013CF 9508      RET
+saveFPRegs:
+    013D0 924A      ST	-Y,R4
+    013D1 925A      ST	-Y,R5
+    013D2 926A      ST	-Y,R6
+    013D3 927A      ST	-Y,R7
+    013D4 928A      ST	-Y,R8
+    013D5 929A      ST	-Y,R9
+    013D6 92AA      ST	-Y,R10
+    013D7 92BA      ST	-Y,R11
+    013D8 92CA      ST	-Y,R12
+    013D9 92DA      ST	-Y,R13
+    013DA 92EA      ST	-Y,R14
+    013DB 92FA      ST	-Y,R15
+    013DC 938A      ST	-Y,R24
+    013DD 939A      ST	-Y,R25
+    013DE 9508      RET
+restoreFPRegs:
+    013DF 9199      LD	R25,Y+
+    013E0 9189      LD	R24,Y+
+    013E1 90F9      LD	R15,Y+
+    013E2 90E9      LD	R14,Y+
+    013E3 90D9      LD	R13,Y+
+    013E4 90C9      LD	R12,Y+
+    013E5 90B9      LD	R11,Y+
+    013E6 90A9      LD	R10,Y+
+    013E7 9099      LD	R9,Y+
+    013E8 9089      LD	R8,Y+
+    013E9 9079      LD	R7,Y+
+    013EA 9069      LD	R6,Y+
+    013EB 9059      LD	R5,Y+
+    013EC 9049      LD	R4,Y+
+    013ED 9508      RET
